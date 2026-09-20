@@ -87,17 +87,10 @@ fun MainControllerScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameName by remember { mutableStateOf("") }
 
-    val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-    }
+    val permissionsToRequest = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
 
     var hasPermissions by remember { mutableStateOf(false) }
 
@@ -127,6 +120,7 @@ fun MainControllerScreen(
             if (!isConnected) {
                 NotConnectedScreen(
                     isScanning = isScanning,
+                    pairedDevices = pairedDevices,
                     discoveredDevices = discoveredDevices,
                     onScanClick = {
                         if (isScanning) {
@@ -231,10 +225,23 @@ fun MainControllerScreen(
 @Composable
 fun NotConnectedScreen(
     isScanning: Boolean,
+    pairedDevices: List<HocoDevice>,
     discoveredDevices: List<HocoDevice>,
     onScanClick: () -> Unit,
     onConnectDevice: (android.bluetooth.BluetoothDevice) -> Unit
 ) {
+    // Merge paired + discovered, deduplicate by address, paired first
+    val allDevices = remember(pairedDevices, discoveredDevices) {
+        val merged = mutableListOf<HocoDevice>()
+        merged.addAll(pairedDevices)
+        for (dev in discoveredDevices) {
+            if (merged.none { it.address == dev.address }) {
+                merged.add(dev)
+            }
+        }
+        merged
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -305,7 +312,7 @@ fun NotConnectedScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (discoveredDevices.isEmpty() && !isScanning) {
+        if (allDevices.isEmpty() && !isScanning) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -326,8 +333,8 @@ fun NotConnectedScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (discoveredDevices.isNotEmpty()) {
-                    items(discoveredDevices) { dev ->
+                if (allDevices.isNotEmpty()) {
+                    items(allDevices) { dev ->
                         DeviceItem(
                             name = dev.name,
                             isBonded = dev.isBonded,

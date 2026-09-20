@@ -32,6 +32,10 @@ class HocoViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasPermissions = MutableStateFlow(false)
     val hasPermissions: StateFlow<Boolean> = _hasPermissions.asStateFlow()
 
+    init {
+        controller.refreshBondedDevices()
+    }
+
     fun updatePermissionsGranted(granted: Boolean) {
         _hasPermissions.value = granted
         if (granted) {
