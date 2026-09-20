@@ -11,8 +11,8 @@ android {
     applicationId = "com.hoco.eq34"
     minSdk = 24
     targetSdk = 36
-    versionCode = 9
-    versionName = "1.0.10"
+    versionCode = 10
+    versionName = "1.0.11"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

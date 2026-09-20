@@ -345,7 +345,7 @@ fun NotConnectedScreen(
 
         // Version at bottom
         Text(
-            text = "v1.0.10",
+            text = "v1.0.11",
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
             color = TextSecondary.copy(alpha = 0.5f),
             modifier = Modifier
@@ -596,7 +596,7 @@ fun ConnectedScreen(
 
         // Version at bottom
         Text(
-            text = "v1.0.10",
+            text = "v1.0.11",
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
             color = TextSecondary.copy(alpha = 0.5f),
             modifier = Modifier.padding(bottom = 8.dp)
