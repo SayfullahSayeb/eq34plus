@@ -20,3 +20,5 @@ release.keystore
 tools/
 hoco_apk_analysis/
 *.apk
+*.apks
+*.aar
