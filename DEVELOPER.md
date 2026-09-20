@@ -1,100 +1,114 @@
 # Developer Guide
 
-How to clone, build, and publish this app.
+How to work on this project. Read this first.
 
-## Clone
+## Project Info
 
-```bash
-git clone https://github.com/YOUR_USERNAME/eq34plus.git
-cd eq34plus
-```
+- **Package**: `com.hoco.eq34`
+- **App name**: HOCO EQ34
+- **GitHub**: `https://github.com/SayfullahSayeb/eq34plus`
+- **Branch**: `main`
 
-## Build
+## How We Work (Follow This)
 
-Requires:
-- Android SDK (API 36)
-- JDK 17
+### Step 1: Make changes
+Edit files in the project.
 
-```bash
-# Debug APK
-./gradlew assembleDebug
-
-# Release APK
-./gradlew assembleRelease
-```
-
-Output: `app/build/outputs/apk/debug/app-debug.apk`
-
-## Publish a Release (Auto Build via GitHub)
-
-### Setup (one time)
-
-1. Push code to GitHub
-2. Go to repo → Settings → Actions → General
-3. Under "Workflow permissions", select "Read and write permissions"
-4. Click Save
-
-### Release a version
+### Step 2: Commit and push (NO local build)
+We do NOT build locally. GitHub Actions CI handles building.
 
 ```bash
-git add .
-git commit -m "v1.0.0"
-git tag v1.0.0
-git push origin main --tags
+git add -A
+git commit -m "v1.0.X: description of changes"
+git tag v1.0.X
+git push origin main
+git push origin v1.0.X
 ```
 
-GitHub Actions will automatically:
-1. Build debug and release APKs
-2. Create a GitHub Release
-3. Attach both APKs to the release
-4. Generate release notes
+That's it. CI builds the APK and creates a GitHub Release automatically.
 
-Users can then download the APK from your repo's Releases page.
+### Step 3: Check CI build
+Go to https://github.com/SayfullahSayeb/eq34plus/actions to see the build status.
 
-### Without tags
+### Step 4: Get APK
+Download from https://github.com/SayfullahSayeb/eq34plus/releases
 
-Every push to `main`/`master` also builds the APK and uploads it as an artifact (under Actions tab → click the workflow run → scroll to Artifacts).
+## Why No Local Build?
+
+- Local build takes 2-3 minutes and adds no value — CI builds the same thing
+- CI produces the release APK that users actually download
+- Faster workflow: commit → push → CI builds while we continue working
+
+## Key Rules
+
+1. **Version bump**: Update `versionCode` and `versionName` in `app/build.gradle.kts` before each release tag
+2. **Never skip CI**: Always push with a tag so CI builds the release APK
+3. **No secrets in git**: Release keystore password is `eq34plus2024`, keystore is NOT in git
+4. **One change per push**: If making multiple changes, commit them together or push separately — each tag = one release
+
+## Reference: Decompiled Original APK
+
+Original HOCO Music APK decompiled at `hoco_apk_analysis/jadx_output/sources/` for protocol reference.
+
+### Key references
+- `b78.java` — BluetoothOption config (matches our `HocoApplication.kt`)
+- `d78.java` — ANC level calculation (matches our `NoiseControlPositions`)
+- `ii8.java` — Progress bar mapping (0-10, Transparency/Standard/ANC)
+- `c48.java` — Mode button presets (Off→5, ANC→10, Transparency→0)
 
 ## Project Structure
 
 ```
-app/src/main/java/com/example/
+app/src/main/java/com/hoco/eq34/
 ├── data/
-│   ├── HocoBleController.kt        # BLE commands
+│   ├── HocoBleController.kt        # BLE scan, connect, RCSP commands, callbacks
 │   ├── model/
-│   │   ├── AncModel.kt             # Noise level mapping
+│   │   ├── AncModel.kt             # Noise level mapping (0-10 ↔ device levels)
 │   │   ├── BatteryInfoModel.kt     # Battery state
-│   │   └── HocoDevice.kt          # Device model
+│   │   └── HocoDevice.kt           # Device model
 │   └── safety/
-│       ├── CommandWhitelist.kt     # Allowed commands
+│       ├── CommandWhitelist.kt     # 7-command whitelist
 │       └── DeviceIdentifier.kt     # Device verification
 ├── ui/
-│   ├── HocoViewModel.kt           # ViewModel
-│   ├── components/                 # UI components
+│   ├── HocoViewModel.kt            # ViewModel bridging UI ↔ controller
+│   ├── components/
+│   │   ├── NoiseControlComponents.kt  # Slider + mode buttons
+│   │   └── BatteryLevelBar.kt      # Battery display
 │   └── screens/
-│       └── MainControllerScreen.kt # Main screen
-├── HocoApplication.kt             # App init
+│       └── MainControllerScreen.kt # NotConnectedScreen + ConnectedScreen
+├── HocoApplication.kt             # SDK init, crash handler
 └── MainActivity.kt                # Entry point
 ```
 
-## Adding Features
+## Critical Details (Don't Forget)
 
-### To add a new BLE command
+### RCSP Callback Registration
+Must call `rcspController.addBTRcspEventCallback(rcspEventCallback)` in `connectToDevice()`.
+Without this, NO events reach the app (discovery, connection, battery, ANC — all silent).
 
-1. Add to `SafeCommand` enum in `CommandWhitelist.kt`
-2. Add to `permittedCommands` set
-3. Add the method in `HocoBleController.kt`
-4. Add proxy in `HocoViewModel.kt`
-5. Wire to UI
+### BluetoothOption Config (matching `b78.java`)
+```kotlin
+useMultiDevice(true)
+reconnect(false)        // matching original app
+priority = PREFER_BLE
+mandatoryUseBLE = false
+mtu = 509
+useDeviceAuth = true    // CRITICAL
+bleScanMode = 2
+```
 
-### To change ANC level calculation
+### Permissions
+- On Android 12+: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`
+- Requested ONLY when user taps Scan, NOT on startup
+- No `neverForLocation` flag on `BLUETOOTH_SCAN`
+- `BLUETOOTH`/`BLUETOOTH_ADMIN` with `maxSdkVersion="30"`
 
-Edit `NoiseControlPositions.deviceLevelForProgress()` in `AncModel.kt`. Formula matches `d78.java` in the official APK.
+### ANC Control
+- Slider 0-10 with 3 mode buttons below
+- Progress 0-4: Transparency (blue)
+- Progress 5: Standard (gray)
+- Progress 6-10: ANC (green)
+- Level formula: `leftCurVal = (progress * step) + step/2` where `step = leftMax / 5`
 
-### Reference files (not in git)
-
-- `hoco_apk_analysis/` — Decompiled official APK
-- `tools/jadx/` — JADX decompiler
-- `hoco.music_1.3.5-gp.apks` — Original APK
-
-These are gitignored but kept locally for reference during development.
+### VoiceMode byte layout (9 bytes)
+`byte[0]=mode`, `byte[1-2]=leftMax`, `byte[3-4]=rightMax`, `byte[5-6]=leftCurVal`, `byte[7-8]=rightCurVal`
