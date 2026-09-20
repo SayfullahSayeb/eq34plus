@@ -144,7 +144,7 @@ fun MainControllerScreen(
             } else {
                 ConnectedScreen(
                     connectionState = connectionState,
-                    connectedDeviceName = connectedDevice?.name ?: "HOCO EQ34 Plus",
+                    connectedDeviceName = connectedDevice?.name ?: "hoco eq34 Plus",
                     batteryState = batteryState,
                     noiseState = noiseState,
                     controlsEnabled = controlsEnabled,
@@ -243,7 +243,7 @@ fun NotConnectedScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "HOCO EQ34 Plus",
+            text = "hoco eq34 Plus",
             style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -437,10 +437,10 @@ fun ConnectedScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Device name with edit icon on top
+        // Device name on left, edit icon on right
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -450,7 +450,6 @@ fun ConnectedScreen(
                     color = TextPrimary
                 )
             )
-            Spacer(modifier = Modifier.width(8.dp))
             IconButton(
                 onClick = {
                     renameName = connectedDeviceName
