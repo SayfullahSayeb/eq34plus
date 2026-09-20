@@ -472,6 +472,13 @@ class HocoBleController private constructor(private val appContext: Context) {
         ctrl.configDeviceName(device, newName, object : OnRcspActionCallback<Int> {
             override fun onSuccess(dev: BluetoothDevice?, message: Int?) {
                 addLog("Rename successful: $newName")
+                try {
+                    val method = device.javaClass.getMethod("setAlias", String::class.java)
+                    method.invoke(device, newName)
+                    addLog("Bluetooth alias updated to: $newName")
+                } catch (e: Exception) {
+                    addLog("Could not set Bluetooth alias: ${e.message}")
+                }
                 ctrl.rebootDevice(device, null)
             }
 
