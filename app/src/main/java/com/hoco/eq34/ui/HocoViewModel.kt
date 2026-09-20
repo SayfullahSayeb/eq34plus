@@ -47,8 +47,9 @@ class HocoViewModel(application: Application) : AndroidViewModel(application) {
     val hasUpdate: StateFlow<Boolean> = _hasUpdate.asStateFlow()
 
     init {
-        controller.refreshBondedDevices()
-        checkForUpdates()
+        if (_hasPermissions.value) {
+            controller.refreshBondedDevices()
+        }
     }
 
     private fun checkForUpdates() {
