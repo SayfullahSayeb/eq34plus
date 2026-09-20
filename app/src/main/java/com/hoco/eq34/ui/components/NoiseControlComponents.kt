@@ -79,7 +79,7 @@ fun SegmentedNoiseLevelSelector(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Segmented bar
         Box(
@@ -95,29 +95,38 @@ fun SegmentedNoiseLevelSelector(
             ) {
                 // Progress 0-4 (Transparency range)
                 for (progress in 0..4) {
+                    val isActive = (progress <= currentProgress)
                     val isSelected = (progress == currentProgress)
-                    val modeColor = if (isSelected) Color(0xFF3B82F6) else Color(0xFFC4C7CF)
+                    val activeColor = when {
+                        currentProgress <= 4 -> Color(0xFF3B82F6)
+                        currentProgress == 5 -> Color(0xFF6B7280)
+                        else -> Color(0xFF10B981)
+                    }
+                    val segmentColor = when {
+                        isSelected -> activeColor
+                        isActive -> activeColor.copy(alpha = 0.5f)
+                        else -> Color(0xFF3F4048)
+                    }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
-                            .clickable(enabled = enabled) { onProgressSelected(progress) }
-                            .then(
-                                if (isSelected) {
-                                    Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0xFF2A2B2F))
-                                } else Modifier
-                            ),
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(segmentColor)
+                            .clickable(enabled = enabled) { onProgressSelected(progress) },
                         contentAlignment = Alignment.Center
                     ) {
                         if (isSelected) {
-                            TransparencyMiniIcon(tint = modeColor)
+                            when {
+                                currentProgress <= 4 -> TransparencyMiniIcon(tint = Color.White)
+                                currentProgress == 5 -> StandardMiniIcon(tint = Color.White)
+                                else -> AncMiniIcon(tint = Color.White)
+                            }
                         } else {
                             Text(
                                 text = progress.toString(),
-                                color = Color(0xFFC4C7CF),
+                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -125,12 +134,14 @@ fun SegmentedNoiseLevelSelector(
                     }
 
                     // Vertical separator
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(24.dp)
-                            .background(Color(0xFF3F4048))
-                    )
+                    if (progress < 4) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(24.dp)
+                                .background(Color(0xFF2A2B2F))
+                        )
+                    }
                 }
 
                 // Center: Progress 5 (Standard mode)
@@ -138,20 +149,21 @@ fun SegmentedNoiseLevelSelector(
                     modifier = Modifier
                         .weight(1.4f)
                         .height(40.dp)
-                        .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) }
-                        .then(
-                            if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
-                                Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0xFF2A2B2F))
-                            } else Modifier
-                        ),
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            when {
+                                currentProgress == 5 -> Color(0xFF6B7280)
+                                currentProgress > 5 -> Color(0xFF6B7280).copy(alpha = 0.5f)
+                                else -> Color(0xFF3F4048)
+                            }
+                        )
+                        .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
+                    if (currentProgress == 5) {
                         StandardMiniIcon(tint = Color.White)
                     } else {
-                        StandardMiniIcon(tint = Color(0xFFC4C7CF))
+                        StandardMiniIcon(tint = if (currentProgress > 5) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF))
                     }
                 }
 
@@ -160,34 +172,35 @@ fun SegmentedNoiseLevelSelector(
                     modifier = Modifier
                         .width(1.dp)
                         .height(24.dp)
-                        .background(Color(0xFF3F4048))
+                        .background(Color(0xFF2A2B2F))
                 )
 
                 // Progress 6-10 (ANC range)
                 for (progress in 6..10) {
+                    val isActive = (progress <= currentProgress)
                     val isSelected = (progress == currentProgress)
-                    val modeColor = if (isSelected) Color(0xFF10B981) else Color(0xFFC4C7CF)
+                    val activeColor = Color(0xFF10B981)
+                    val segmentColor = when {
+                        isSelected -> activeColor
+                        isActive -> activeColor.copy(alpha = 0.5f)
+                        else -> Color(0xFF3F4048)
+                    }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
-                            .clickable(enabled = enabled) { onProgressSelected(progress) }
-                            .then(
-                                if (isSelected) {
-                                    Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0xFF2A2B2F))
-                                } else Modifier
-                            ),
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(segmentColor)
+                            .clickable(enabled = enabled) { onProgressSelected(progress) },
                         contentAlignment = Alignment.Center
                     ) {
                         if (isSelected) {
-                            AncMiniIcon(tint = modeColor)
+                            AncMiniIcon(tint = Color.White)
                         } else {
                             Text(
                                 text = progress.toString(),
-                                color = Color(0xFFC4C7CF),
+                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -199,7 +212,7 @@ fun SegmentedNoiseLevelSelector(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(24.dp)
-                                .background(Color(0xFF3F4048))
+                                .background(Color(0xFF2A2B2F))
                         )
                     }
                 }
@@ -239,7 +252,7 @@ fun NoiseModeButton(
             when (mode) {
                 NoiseMode.TRANSPARENCY -> TransparencyCustomIcon(tint = if (isSelected) Color.White else Color(0xFF9E9EA7))
                 NoiseMode.STANDARD -> StandardCustomIcon(tint = if (isSelected) Color.White else Color(0xFF9E9EA7))
-                NoiseMode.ANC -> AncCustomIcon(tint = Color.White)
+                NoiseMode.ANC -> AncCustomIcon(tint = if (isSelected) Color.White else Color(0xFF9E9EA7))
             }
         }
 

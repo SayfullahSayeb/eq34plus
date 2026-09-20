@@ -37,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -163,30 +164,67 @@ fun MainControllerScreen(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename Device") },
-            text = {
-                OutlinedTextField(
-                    value = renameName,
-                    onValueChange = { renameName = it },
-                    label = { Text("Device Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.renameDevice(renameName)
-                        showRenameDialog = false
-                    },
-                    enabled = renameName.isNotBlank() && renameName.length <= 32
-                ) { Text("Rename") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .clickable(enabled = false) { },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Rename Device",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = renameName,
+                        onValueChange = { renameName = it },
+                        label = { Text("Device Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showRenameDialog = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.renameDevice(renameName)
+                                showRenameDialog = false
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = renameName.isNotBlank() && renameName.length <= 32,
+                            colors = ButtonDefaults.buttonColors(containerColor = TextPrimary)
+                        ) {
+                            Text("Rename", color = Color.White)
+                        }
+                    }
+                }
             }
-        )
+        }
     }
 }
 
@@ -231,7 +269,7 @@ fun NotConnectedScreen(
                 painter = painterResource(id = R.drawable.eq34_case),
                 contentDescription = "EQ34 Plus Case",
                 tint = Color.Unspecified,
-                modifier = Modifier.size(100.dp)
+                modifier = Modifier.size(160.dp)
             )
         }
 
@@ -566,29 +604,66 @@ fun ConnectedScreen(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename Device") },
-            text = {
-                OutlinedTextField(
-                    value = renameName,
-                    onValueChange = { renameName = it },
-                    label = { Text("Device Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onRename(renameName)
-                        showRenameDialog = false
-                    },
-                    enabled = renameName.isNotBlank() && renameName.length <= 32
-                ) { Text("Rename") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .clickable(enabled = false) { },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Rename Device",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = renameName,
+                        onValueChange = { renameName = it },
+                        label = { Text("Device Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showRenameDialog = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                onRename(renameName)
+                                showRenameDialog = false
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = renameName.isNotBlank() && renameName.length <= 32,
+                            colors = ButtonDefaults.buttonColors(containerColor = TextPrimary)
+                        ) {
+                            Text("Rename", color = Color.White)
+                        }
+                    }
+                }
             }
-        )
+        }
     }
 }
