@@ -2,10 +2,7 @@ name: Build & Release APK
 
 on:
   push:
-    branches: [ main, master ]
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
 
 permissions:
   contents: write
@@ -58,7 +55,6 @@ jobs:
         retention-days: 90
 
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
         name: "${{ github.ref_name }}"
