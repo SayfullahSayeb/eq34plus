@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.hoco.eq34.data.model.BatteryInfoModel
 import com.hoco.eq34.data.model.HocoDevice
 import com.hoco.eq34.data.model.NoiseControlState
@@ -649,6 +652,14 @@ class HocoBleController private constructor(private val appContext: Context) {
 
     @SuppressLint("MissingPermission")
     fun startScan() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val scanGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+            val connectGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            if (!scanGranted || !connectGranted) {
+                addLog("BLUETOOTH_SCAN/CONNECT permission not granted. Please grant permissions.")
+                return
+            }
+        }
         val ctrl = rcspController
         if (ctrl == null) {
             addLog("BLE Controller not ready - RCSP not initialized")
