@@ -27,23 +27,6 @@ Lightweight Android app (18 MB) to control HOCO EQ34 Plus TWS earbuds via Blueto
 
 **You get what you need daily.** Missing features (EQ, touch keys, OTA) require the official app and are rarely used.
 
-## Safety
-
-This app sends only 7 safe BLE commands:
-
-| Command | Purpose |
-|---|---|
-| Read Device Info | Query device capabilities |
-| Read Battery | Query battery levels |
-| Read ANC State | Query current noise mode |
-| Read Voice Modes | Query available modes |
-| Set ANC Mode | Change ANC/Transparency/Standard |
-| Set ANC Level | Adjust noise cancellation strength |
-| Rename Device | Change Bluetooth name |
-
-**Blocked:** Firmware update, OTA, flash operations, factory reset, reboot, raw byte writes — all hard-blocked in code.
-
-**Your TWS cannot be bricked.** Every command uses the exact same BLE payload as the official app, verified against the decompiled APK.
 
 ## Download
 

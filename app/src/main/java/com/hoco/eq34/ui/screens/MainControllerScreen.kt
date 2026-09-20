@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -35,13 +36,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,18 +51,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hoco.eq34.R
 import com.hoco.eq34.data.ConnectionStatus
 import com.hoco.eq34.ui.HocoViewModel
+import com.hoco.eq34.data.model.BatteryInfoModel
+import com.hoco.eq34.data.model.HocoDevice
+import com.hoco.eq34.data.model.NoiseControlState
 import com.hoco.eq34.data.model.NoiseMode
-import com.hoco.eq34.ui.components.EarbudsHeroDisplay
-import com.hoco.eq34.ui.components.ScreenshotAccurateNoiseCard
 import com.hoco.eq34.ui.theme.CleanWhiteBackground
-import com.hoco.eq34.ui.theme.CleanWhiteSurface
 import com.hoco.eq34.ui.theme.GreenBattery
 import com.hoco.eq34.ui.theme.TextPrimary
 import com.hoco.eq34.ui.theme.TextSecondary
@@ -96,12 +99,14 @@ fun MainControllerScreen(
         )
     }
 
+    var hasPermissions by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val allGranted = results.values.all { it }
-        viewModel.updatePermissionsGranted(allGranted)
-        if (allGranted) {
+        hasPermissions = results.values.all { it }
+        if (hasPermissions) {
+            viewModel.refreshBondedDevices()
             viewModel.startScan()
         }
     }
@@ -125,16 +130,16 @@ fun MainControllerScreen(
                     pairedDevices = pairedDevices,
                     discoveredDevices = discoveredDevices,
                     onScanClick = {
-                        viewModel.startScan()
-                    },
-                    onStopScanClick = {
-                        viewModel.stopScan()
+                        if (isScanning) {
+                            viewModel.stopScan()
+                        } else if (hasPermissions) {
+                            viewModel.startScan()
+                        } else {
+                            permissionLauncher.launch(permissionsToRequest)
+                        }
                     },
                     onConnectDevice = { device ->
                         viewModel.connect(device)
-                    },
-                    onRequestPermissions = {
-                        permissionLauncher.launch(permissionsToRequest)
                     }
                 )
             } else {
@@ -190,12 +195,10 @@ fun MainControllerScreen(
 @Composable
 fun NotConnectedScreen(
     isScanning: Boolean,
-    pairedDevices: List<com.hoco.eq34.data.model.HocoDevice>,
-    discoveredDevices: List<com.hoco.eq34.data.model.HocoDevice>,
+    pairedDevices: List<HocoDevice>,
+    discoveredDevices: List<HocoDevice>,
     onScanClick: () -> Unit,
-    onStopScanClick: () -> Unit,
-    onConnectDevice: (android.bluetooth.BluetoothDevice) -> Unit,
-    onRequestPermissions: () -> Unit
+    onConnectDevice: (android.bluetooth.BluetoothDevice) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -223,13 +226,7 @@ fun NotConnectedScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = {
-                if (isScanning) {
-                    onStopScanClick()
-                } else {
-                    onRequestPermissions()
-                }
-            },
+            onClick = onScanClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -243,7 +240,7 @@ fun NotConnectedScreen(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Scanning...", color = Color.White)
+                Text("Stop Scanning", color = Color.White)
             } else {
                 Icon(
                     Icons.Default.Headset,
@@ -271,12 +268,12 @@ fun NotConnectedScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Default.Headset,
+                        painter = painterResource(id = R.drawable.eq34_case),
                         contentDescription = null,
-                        tint = Color(0xFFD1D5DB),
-                        modifier = Modifier.size(48.dp)
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(120.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Open your EQ34 Plus case\nto discover earbuds",
                         textAlign = TextAlign.Center,
@@ -304,7 +301,6 @@ fun NotConnectedScreen(
                     items(pairedDevices) { dev ->
                         DeviceItem(
                             name = dev.name,
-                            address = dev.address,
                             isBonded = dev.isBonded,
                             onClick = { onConnectDevice(dev.device) }
                         )
@@ -327,7 +323,6 @@ fun NotConnectedScreen(
                     }) { dev ->
                         DeviceItem(
                             name = dev.name,
-                            address = dev.address,
                             isBonded = dev.isBonded,
                             onClick = { onConnectDevice(dev.device) }
                         )
@@ -361,7 +356,6 @@ fun NotConnectedScreen(
 @Composable
 fun DeviceItem(
     name: String,
-    address: String,
     isBonded: Boolean,
     onClick: () -> Unit
 ) {
@@ -388,33 +382,26 @@ fun DeviceItem(
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = name,
-                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (isHoco) FontWeight.Bold else FontWeight.Normal,
-                        color = TextPrimary
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (isBonded) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Paired",
-                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
-                            color = GreenBattery,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                }
-            }
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = address,
-                style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                text = name,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = if (isHoco) FontWeight.Bold else FontWeight.Normal,
+                    color = TextPrimary
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+            if (isBonded) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Paired",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
+                        color = GreenBattery,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+            }
         }
     }
 }
@@ -423,22 +410,22 @@ fun DeviceItem(
 fun ConnectedScreen(
     connectionState: ConnectionStatus,
     connectedDeviceName: String,
-    batteryState: com.hoco.eq34.data.model.BatteryInfoModel,
-    noiseState: com.hoco.eq34.data.model.NoiseControlState,
+    batteryState: BatteryInfoModel,
+    noiseState: NoiseControlState,
     controlsEnabled: Boolean,
     onProgressSelected: (Int) -> Unit,
     onModeSelect: (NoiseMode) -> Unit,
     onDisconnect: () -> Unit,
     onRename: (String) -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameName by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -467,18 +454,64 @@ fun ConnectedScreen(
                     color = if (connectionState == ConnectionStatus.READY) GreenBattery else TextSecondary
                 )
             }
-            OutlinedButton(onClick = onDisconnect) {
-                Text("Disconnect", style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        EarbudsHeroDisplay(batteryState = batteryState)
+        // Earbuds images: Left bud | Case | Right bud
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(id = R.drawable.eq34_left),
+                    contentDescription = "Left Earbud",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(80.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "L ${if (batteryState.leftBattery > 0) "${batteryState.leftBattery}%" else ""}",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = TextPrimary
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(id = R.drawable.eq34_case),
+                    contentDescription = "Case",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Case ${if (batteryState.caseBattery > 0) "${batteryState.caseBattery}%" else ""}",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(id = R.drawable.eq34_right),
+                    contentDescription = "Right Earbud",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(80.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "R ${if (batteryState.rightBattery > 0) "${batteryState.rightBattery}%" else ""}",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = TextPrimary
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        ScreenshotAccurateNoiseCard(
+        // ANC Control Card
+        com.hoco.eq34.ui.components.ScreenshotAccurateNoiseCard(
             noiseState = noiseState,
             isConnected = controlsEnabled,
             onProgressSelected = onProgressSelected,
@@ -521,11 +554,38 @@ fun ConnectedScreen(
                     Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF856404), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Device not verified. Controls disabled for safety.",
+                        text = "Device not verified. Controls disabled.",
                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                         color = Color(0xFF856404)
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Bottom: Edit name + Disconnect
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {
+                renameName = connectedDeviceName
+                showRenameDialog = true
+            }) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit Name",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(onClick = onDisconnect) {
+                Text("Disconnect", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
             }
         }
     }
