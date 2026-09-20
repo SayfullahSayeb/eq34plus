@@ -42,9 +42,6 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
-
     - name: Build Release APK
       run: ./gradlew assembleRelease
       env:
@@ -53,18 +50,11 @@ jobs:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
 
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: EQ34Plus-debug-${{ github.ref_name }}
-        path: app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
-
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
         name: EQ34Plus-release-${{ github.ref_name }}
-        path: app/build/outputs/apk/release/app-release-*.apk
+        path: app/build/outputs/apk/release/app-release.apk
         retention-days: 90
 
     - name: Create GitHub Release
@@ -73,22 +63,10 @@ jobs:
       with:
         name: "HOCO EQ34 Plus Controller ${{ github.ref_name }}"
         body: |
-          ## HOCO EQ34 Plus Controller
+          HOCO EQ34 Plus Controller — lightweight BLE companion for your earbuds.
           
-          ### What's New
-          - See commit history for changes
-          
-          ### Installation
-          1. Download the APK below
-          2. Enable "Install from unknown sources" on your Android device
-          3. Install the APK
-          
-          ### Files
-          - `app-debug.apk` - Debug build (for testing)
-          - `app-release.apk` - Signed release build (recommended)
-        files: |
-          app/build/outputs/apk/debug/app-debug.apk
-          app/build/outputs/apk/release/app-release.apk
+          **Install:** Download the APK → Enable "Install from unknown sources" → Install.
+        files: app/build/outputs/apk/release/app-release.apk
         draft: false
         prerelease: false
         generate_release_notes: true

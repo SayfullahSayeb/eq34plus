@@ -147,6 +147,7 @@ fun MainControllerScreen(
     var renameName by remember { mutableStateOf("") }
     var showConnectDialog by remember { mutableStateOf(false) }
     var pendingConnectDevice by remember { mutableStateOf<android.bluetooth.BluetoothDevice?>(null) }
+    var pendingDeviceName by remember { mutableStateOf("HOCO EQ34 Plus") }
 
     // Auto-show connect dialog when a HOCO device is discovered and we're not connected
     LaunchedEffect(discoveredDevices, connectionState) {
@@ -156,6 +157,7 @@ fun MainControllerScreen(
             }
             if (hocoDevice != null && !showConnectDialog) {
                 pendingConnectDevice = hocoDevice.device
+                pendingDeviceName = hocoDevice.name
                 showConnectDialog = true
             }
         }
@@ -365,9 +367,7 @@ fun MainControllerScreen(
         // Connection popup overlay
         ConnectionDialogOverlay(
             show = showConnectDialog,
-            deviceName = pendingConnectDevice?.let {
-                try { it.name ?: "HOCO EQ34 Plus" } catch (_: Exception) { "HOCO EQ34 Plus" }
-            } ?: "HOCO EQ34 Plus",
+            deviceName = pendingDeviceName,
             isConnected = connectionState == ConnectionStatus.READY,
             isConnecting = connectionState == ConnectionStatus.CONNECTING || connectionState == ConnectionStatus.IDENTIFYING,
             batteryState = batteryState,
