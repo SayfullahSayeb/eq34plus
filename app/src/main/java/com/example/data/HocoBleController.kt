@@ -140,49 +140,62 @@ class HocoBleController private constructor(private val appContext: Context) {
         }
 
         override fun onBatteryChange(device: BluetoothDevice?, batteryInfo: BatteryInfo?) {
-            batteryInfo?.let {
-                addLog("Battery update: ${it.battery}%")
-                _batteryState.value = _batteryState.value.copy(
-                    singleBattery = it.battery
-                )
+            try {
+                batteryInfo?.let {
+                    addLog("Battery update: ${it.battery}%")
+                    _batteryState.value = _batteryState.value.copy(
+                        singleBattery = it.battery
+                    )
+                }
+            } catch (e: Exception) {
+                addLog("Battery callback error: ${e.message}")
             }
         }
 
         override fun onDeviceBroadcast(device: BluetoothDevice?, msg: DevBroadcastMsg?) {
-            msg?.let {
-                val left = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery
-                val right = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery
-                val case = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery
-                addLog("Broadcast: L=${left}% R=${right}% Case=${case}%")
-                _batteryState.value = _batteryState.value.copy(
-                    leftBattery = left,
-                    isLeftCharging = it.isLeftCharging,
-                    rightBattery = right,
-                    isRightCharging = it.isRightCharging,
-                    caseBattery = case,
-                    isCaseCharging = it.isDeviceCharging
-                )
+            try {
+                msg?.let {
+                    val left = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery
+                    val right = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery
+                    val case = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery
+                    addLog("Broadcast: L=${left}% R=${right}% Case=${case}%")
+                    _batteryState.value = _batteryState.value.copy(
+                        leftBattery = left,
+                        isLeftCharging = it.isLeftCharging,
+                        rightBattery = right,
+                        isRightCharging = it.isRightCharging,
+                        caseBattery = case,
+                        isCaseCharging = it.isDeviceCharging
+                    )
+                }
+            } catch (e: Exception) {
+                addLog("Broadcast callback error: ${e.message}")
             }
         }
 
         override fun onDeviceSettingsInfo(device: BluetoothDevice?, type: Int, advInfo: ADVInfoResponse?) {
-            advInfo?.let {
-                val left = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery
-                val right = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery
-                val case = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery
-                addLog("Settings info: L=${left}% R=${right}% Case=${case}%")
-                _batteryState.value = _batteryState.value.copy(
-                    leftBattery = left,
-                    isLeftCharging = it.isLeftCharging,
-                    rightBattery = right,
-                    isRightCharging = it.isRightCharging,
-                    caseBattery = case
-                )
+            try {
+                advInfo?.let {
+                    val left = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery
+                    val right = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery
+                    val case = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery
+                    addLog("Settings info: L=${left}% R=${right}% Case=${case}%")
+                    _batteryState.value = _batteryState.value.copy(
+                        leftBattery = left,
+                        isLeftCharging = it.isLeftCharging,
+                        rightBattery = right,
+                        isRightCharging = it.isRightCharging,
+                        caseBattery = case
+                    )
+                }
+            } catch (e: Exception) {
+                addLog("Settings info callback error: ${e.message}")
             }
         }
 
         override fun onCurrentVoiceMode(device: BluetoothDevice?, voiceMode: VoiceMode?) {
-            voiceMode?.let {
+            try {
+                voiceMode?.let {
                 val noiseMode = NoiseMode.fromModeId(it.mode)
                 val maxLevel = if (it.leftMax > 0) it.leftMax else rawLeftMax
                 rawLeftMax = maxLevel
@@ -216,63 +229,76 @@ class HocoBleController private constructor(private val appContext: Context) {
 
                 _noiseState.value = confirmedState
             }
+            } catch (e: Exception) {
+                addLog("VoiceMode callback error: ${e.message}")
+            }
         }
 
         override fun onVoiceModeList(device: BluetoothDevice?, voiceModes: MutableList<VoiceMode>?) {
-            voiceModes?.let { list ->
-                addLog("Supported VoiceModes: size=${list.size}")
-                val ancMode = list.firstOrNull { it.mode == VoiceMode.VOICE_MODE_DENOISE }
-                if (ancMode != null && ancMode.leftMax > 0) {
-                    rawLeftMax = ancMode.leftMax
-                    _noiseState.value = _noiseState.value.copy(maxInternalLevel = ancMode.leftMax)
+            try {
+                voiceModes?.let { list ->
+                    addLog("Supported VoiceModes: size=${list.size}")
+                    val ancMode = list.firstOrNull { it.mode == VoiceMode.VOICE_MODE_DENOISE }
+                    if (ancMode != null && ancMode.leftMax > 0) {
+                        rawLeftMax = ancMode.leftMax
+                        _noiseState.value = _noiseState.value.copy(maxInternalLevel = ancMode.leftMax)
+                    }
                 }
+            } catch (e: Exception) {
+                addLog("VoiceModeList callback error: ${e.message}")
             }
         }
 
         override fun onDiscovery(device: BluetoothDevice?, bleScanMessage: BleScanMessage?) {
-            device ?: return
-            val name = getDeviceName(device)
-            val address = device.address ?: return
-            val rssi = bleScanMessage?.rssi ?: 0
+            try {
+                device ?: return
+                val name = getDeviceName(device)
+                val address = device.address ?: return
+                val rssi = bleScanMessage?.rssi ?: 0
 
-            val item = HocoDevice(
-                device = device,
-                name = if (name.isNotEmpty()) name else "JieLi Audio Device",
-                address = address,
-                isBonded = isDeviceBonded(device),
-                rssi = rssi
-            )
+                val item = HocoDevice(
+                    device = device,
+                    name = if (name.isNotEmpty()) name else "JieLi Audio Device",
+                    address = address,
+                    isBonded = isDeviceBonded(device),
+                    rssi = rssi
+                )
 
-            bleScanMessage?.let {
-                if (it.leftDeviceQuantity in 0..100 || it.rightDeviceQuantity in 0..100 || it.chargingBinQuantity in 0..100) {
-                    if (_connectedDevice.value?.address == address) {
-                        _batteryState.value = _batteryState.value.copy(
-                            leftBattery = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery,
-                            isLeftCharging = it.isLeftCharging,
-                            rightBattery = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery,
-                            isRightCharging = it.isRightCharging,
-                            caseBattery = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery,
-                            isCaseCharging = it.chargingBinStatus > 0
-                        )
+                bleScanMessage?.let {
+                    if (it.leftDeviceQuantity in 0..100 || it.rightDeviceQuantity in 0..100 || it.chargingBinQuantity in 0..100) {
+                        if (_connectedDevice.value?.address == address) {
+                            _batteryState.value = _batteryState.value.copy(
+                                leftBattery = if (it.leftDeviceQuantity in 0..100) it.leftDeviceQuantity else _batteryState.value.leftBattery,
+                                isLeftCharging = it.isLeftCharging,
+                                rightBattery = if (it.rightDeviceQuantity in 0..100) it.rightDeviceQuantity else _batteryState.value.rightBattery,
+                                isRightCharging = it.isRightCharging,
+                                caseBattery = if (it.chargingBinQuantity in 0..100) it.chargingBinQuantity else _batteryState.value.caseBattery,
+                                isCaseCharging = it.chargingBinStatus > 0
+                            )
+                        }
                     }
                 }
-            }
 
-            val currentList = _discoveredDevices.value.toMutableList()
-            val existingIndex = currentList.indexOfFirst { it.address == address }
-            if (existingIndex >= 0) {
-                currentList[existingIndex] = item
-            } else {
-                currentList.add(item)
+                val currentList = _discoveredDevices.value.toMutableList()
+                val existingIndex = currentList.indexOfFirst { it.address == address }
+                if (existingIndex >= 0) {
+                    currentList[existingIndex] = item
+                } else {
+                    currentList.add(item)
+                }
+                currentList.sortByDescending { dev ->
+                    var priority = 0
+                    if (dev.name.contains("HOCO", ignoreCase = true)) priority += 100
+                    if (dev.name.contains("EQ34", ignoreCase = true)) priority += 200
+                    if (dev.isBonded) priority += 50
+                    priority
+                }
+                _discoveredDevices.value = currentList
+            } catch (e: SecurityException) {
+                addLog("Discovery permission error: ${e.message}")
+            } catch (e: Exception) {
+                addLog("Discovery error: ${e.message}")
             }
-            currentList.sortByDescending { dev ->
-                var priority = 0
-                if (dev.name.contains("HOCO", ignoreCase = true)) priority += 100
-                if (dev.name.contains("EQ34", ignoreCase = true)) priority += 200
-                if (dev.isBonded) priority += 50
-                priority
-            }
-            _discoveredDevices.value = currentList
         }
 
         override fun onDiscoveryStatus(bBle: Boolean, bStart: Boolean) {
