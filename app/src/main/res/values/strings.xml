@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HOCO EQ34 Plus</string>
+    <string name="app_name">HOCO EQ34</string>
     <string name="app_title">HOCO EQ34 Plus</string>
     <string name="app_subtitle">Dedicated TWS Earbud Controller</string>
     <string name="device_status_disconnected">Disconnected</string>

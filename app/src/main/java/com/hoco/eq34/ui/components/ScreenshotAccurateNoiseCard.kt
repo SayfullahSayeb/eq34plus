@@ -165,7 +165,7 @@ fun CompactConnectionStatusBar(
                 Column {
                     Text(
                         text = when (connectionState) {
-                            ConnectionStatus.READY -> connectedDevice?.name ?: "HOCO EQ34"
+                            ConnectionStatus.READY -> connectedDevice?.name ?: "HOCO EQ34 Plus"
                             ConnectionStatus.CONNECTED -> connectedDevice?.name ?: "Connected"
                             ConnectionStatus.IDENTIFYING -> connectedDevice?.name ?: "Identifying..."
                             ConnectionStatus.CONNECTING -> "Connecting..."
