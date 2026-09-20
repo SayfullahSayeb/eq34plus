@@ -36,9 +36,9 @@ class HocoApplication : Application() {
             try {
                 val bluetoothOption = BluetoothOption.createDefaultOption()
                     .setUseMultiDevice(true)
-                    .setReconnect(true)
+                    .setReconnect(false)
                     .setPriority(BluetoothOption.PREFER_BLE)
-                    .setMandatoryUseBLE(true)
+                    .setMandatoryUseBLE(false)
                     .setMtu(509)
                     .setUseDeviceAuth(true)
                     .setBleScanMode(2)

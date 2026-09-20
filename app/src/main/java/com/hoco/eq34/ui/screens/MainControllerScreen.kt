@@ -152,7 +152,7 @@ fun MainControllerScreen(
     // Controls are only enabled when device is identified and ready
     val controlsEnabled = connectionState == ConnectionStatus.READY
 
-    // Permissions launcher — match original HOCO app: BLUETOOTH_SCAN + BLUETOOTH_CONNECT + FINE_LOCATION
+    // Permissions launcher - request only when user taps scan, not on startup
     val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
@@ -171,10 +171,9 @@ fun MainControllerScreen(
     ) { results ->
         val allGranted = results.values.all { it }
         viewModel.updatePermissionsGranted(allGranted)
-    }
-
-    LaunchedEffect(Unit) {
-        permissionLauncher.launch(permissionsToRequest)
+        if (allGranted) {
+            viewModel.startScan()
+        }
     }
 
     Surface(
@@ -204,13 +203,6 @@ fun MainControllerScreen(
                 }
             )
 
-            if (!hasPermissions) {
-                // Permission warning card
-                PermissionRequestCard(
-                    onRequestPermissions = { permissionLauncher.launch(permissionsToRequest) }
-                )
-            }
-
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -225,7 +217,13 @@ fun MainControllerScreen(
                         connectedDevice = connectedDevice,
                         isScanning = isScanning,
                         onScanClick = {
-                            if (isScanning) viewModel.stopScan() else viewModel.startScan()
+                            if (isScanning) {
+                                viewModel.stopScan()
+                            } else if (hasPermissions) {
+                                viewModel.startScan()
+                            } else {
+                                permissionLauncher.launch(permissionsToRequest)
+                            }
                         },
                         onDisconnectClick = { viewModel.disconnect() },
                         onManageClick = { showDeviceSheet = !showDeviceSheet }
@@ -303,7 +301,13 @@ fun MainControllerScreen(
                             connectedDevice = connectedDevice,
                             onConnectDevice = { device -> viewModel.connect(device) },
                             onScanClick = {
-                                if (isScanning) viewModel.stopScan() else viewModel.startScan()
+                                if (isScanning) {
+                                    viewModel.stopScan()
+                                } else if (hasPermissions) {
+                                    viewModel.startScan()
+                                } else {
+                                    permissionLauncher.launch(permissionsToRequest)
+                                }
                             }
                         )
                     }
