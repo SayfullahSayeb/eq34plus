@@ -379,9 +379,9 @@ fun DeviceItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            Icons.Default.Headset,
+            painter = painterResource(id = R.drawable.eq34_case),
             contentDescription = null,
-            tint = if (isHoco) TextPrimary else TextSecondary,
+            tint = Color.Unspecified,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(14.dp))
@@ -462,18 +462,6 @@ fun ConnectedScreen(
                     )
                 }
             }
-
-        val statusText = when (connectionState) {
-            ConnectionStatus.CONNECTING -> "Connecting..."
-            ConnectionStatus.IDENTIFYING -> "Identifying..."
-            ConnectionStatus.READY -> "Connected"
-            else -> "Connected"
-        }
-        Text(
-            text = statusText,
-            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-            color = if (connectionState == ConnectionStatus.READY) GreenBattery else TextSecondary
-        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -604,14 +592,6 @@ fun ConnectedScreen(
         ) {
             Text("Disconnect", color = TextPrimary, fontWeight = FontWeight.Medium)
         }
-
-        // Version at bottom
-        Text(
-            text = "v1.0.12",
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-            color = TextSecondary.copy(alpha = 0.5f),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
     }
 
     if (showRenameDialog) {
