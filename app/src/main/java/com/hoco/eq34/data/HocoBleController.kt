@@ -313,6 +313,15 @@ class HocoBleController private constructor(private val appContext: Context) {
         }
     }
 
+    init {
+        try {
+            rcspController?.addBTRcspEventCallback(rcspEventCallback)
+            addLog("RCSP callback registered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register RCSP callback: ${e.message}")
+        }
+    }
+
     private suspend fun performSafeIdentificationSequence(device: BluetoothDevice) {
         try {
             _connectionState.value = ConnectionStatus.IDENTIFYING
