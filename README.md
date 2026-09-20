@@ -2,13 +2,6 @@
 
 Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, replacing the 147 MB official hoco Music app.
 
-## Features
-
-- **Noise Control** — ANC, Transparency, Standard with 11-level adjustment
-- **Battery** — Left earbud, right earbud, and case battery levels
-- **Device Rename** — Change your earbuds' Bluetooth name
-- **Connection Popup** — Animated slide-up when earbuds are detected
-- **Safe** — Device identification + command whitelist, no firmware operations
 
 ## Comparison
 
@@ -16,7 +9,7 @@ Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, rep
 |---|---|---|
 | Noise Control (ANC/Transparency/Standard) | ✅ | ✅ |
 | 11-Level Adjustment | ✅ | ✅ |
-| Battery (L/R/Case) | ✅ | ✅ |
+| Battery (L/R) | ✅ | ✅ |
 | Device Rename | ✅ | ✅ |
 | Connect Popup | ✅ | ✅ |
 | Read-back Verification | ✅ | ✅ |
