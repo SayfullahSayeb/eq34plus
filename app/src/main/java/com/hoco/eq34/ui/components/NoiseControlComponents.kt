@@ -1,4 +1,6 @@
-﻿package com.hoco.eq34.ui.components
+﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+package com.hoco.eq34.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
