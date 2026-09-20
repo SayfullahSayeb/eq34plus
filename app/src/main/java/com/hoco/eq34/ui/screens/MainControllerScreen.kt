@@ -80,6 +80,9 @@ fun MainControllerScreen(
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val pairedDevices by viewModel.pairedDevices.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
+    val currentVersion by remember { mutableStateOf(viewModel.currentVersion) }
+    val latestVersion by viewModel.latestVersion.collectAsState()
+    val hasUpdate by viewModel.hasUpdate.collectAsState()
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameName by remember { mutableStateOf("") }
@@ -102,6 +105,8 @@ fun MainControllerScreen(
                     isScanning = isScanning,
                     pairedDevices = pairedDevices,
                     discoveredDevices = discoveredDevices,
+                    currentVersion = currentVersion,
+                    hasUpdate = hasUpdate,
                     onScanClick = {
                         if (isScanning) {
                             viewModel.stopScan()
@@ -206,6 +211,8 @@ fun NotConnectedScreen(
     isScanning: Boolean,
     pairedDevices: List<HocoDevice>,
     discoveredDevices: List<HocoDevice>,
+    currentVersion: String = "",
+    hasUpdate: Boolean = false,
     onScanClick: () -> Unit,
     onConnectDevice: (android.bluetooth.BluetoothDevice) -> Unit
 ) {
@@ -346,9 +353,9 @@ fun NotConnectedScreen(
 
         // Version at bottom
         Text(
-            text = "v1.0.13",
+            text = if (hasUpdate) "v$currentVersion (update available)" else "v$currentVersion",
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-            color = TextSecondary.copy(alpha = 0.5f),
+            color = if (hasUpdate) TextPrimary.copy(alpha = 0.7f) else TextSecondary.copy(alpha = 0.5f),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
