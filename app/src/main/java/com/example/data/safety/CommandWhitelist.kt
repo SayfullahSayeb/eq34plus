@@ -35,6 +35,7 @@ object CommandWhitelist {
         READ_VOICE_MODES,
         SET_ANC_MODE,
         SET_ANC_LEVEL,
+        RENAME_DEVICE,
     }
 
     /**
@@ -51,7 +52,6 @@ object CommandWhitelist {
         FLASH_CREATE_FILE,
         FLASH_DELETE_FILE,
         FLASH_RESTORE_SYSTEM,
-        DEVICE_CONFIG_NAME,
         DEVICE_CONFIG_KEY_SETTINGS,
         DEVICE_CONFIG_LED_SETTINGS,
         RAW_BYTE_WRITE,
@@ -70,6 +70,7 @@ object CommandWhitelist {
         SafeCommand.READ_VOICE_MODES,
         SafeCommand.SET_ANC_MODE,
         SafeCommand.SET_ANC_LEVEL,
+        SafeCommand.RENAME_DEVICE,
     )
 
     /**
@@ -98,7 +99,6 @@ object CommandWhitelist {
             BlockedCommand.FLASH_RESTORE_SYSTEM,
             BlockedCommand.ANY_FLASH_COMMAND ->
                 "Flash memory operations are blocked to prevent data loss."
-            BlockedCommand.DEVICE_CONFIG_NAME,
             BlockedCommand.DEVICE_CONFIG_KEY_SETTINGS,
             BlockedCommand.DEVICE_CONFIG_LED_SETTINGS ->
                 "Device configuration changes are not permitted in this app."

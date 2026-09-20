@@ -65,6 +65,7 @@ fun HocoTopBar(
     title: String,
     onBackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onTitleClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -94,7 +95,9 @@ fun HocoTopBar(
                 color = TextPrimary
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .then(if (onTitleClick != null) Modifier.clickable { onTitleClick() } else Modifier)
         )
 
         IconButton(
@@ -160,26 +163,26 @@ fun EarbudsHeroDisplay(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // High quality product render of HOCO earbuds
+        // EQ34 Plus earbuds with case image
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(210.dp),
+                .height(260.dp),
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.img_hoco_earbuds),
-                contentDescription = "HOCO EQ34 Plus Earbuds",
+                painter = painterResource(id = R.drawable.eq34_case),
+                contentDescription = "HOCO EQ34 Plus",
                 modifier = Modifier
-                    .size(230.dp),
+                    .height(250.dp)
+                    .fillMaxWidth(),
                 contentScale = ContentScale.Fit
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Left & Right Battery Pills matching screenshot:
-        // (L) 100%             (R) 100%
+        // Left & Right Battery Pills
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -189,12 +192,20 @@ fun EarbudsHeroDisplay(
         ) {
             EarbudBatteryPill(
                 side = "L",
-                percentage = if (batteryState.leftBattery >= 0) batteryState.leftBattery else 100
+                percentage = if (batteryState.leftBattery >= 0) batteryState.leftBattery else 0
             )
 
             EarbudBatteryPill(
                 side = "R",
-                percentage = if (batteryState.rightBattery >= 0) batteryState.rightBattery else 100
+                percentage = if (batteryState.rightBattery >= 0) batteryState.rightBattery else 0
+            )
+        }
+
+        if (batteryState.caseBattery > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            EarbudBatteryPill(
+                side = "Case",
+                percentage = batteryState.caseBattery
             )
         }
     }

@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.example.data.ConnectionStatus
-import com.example.data.model.AncSettings
+import com.example.data.model.NoiseControlState
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.NoiseMode
 import com.example.ui.screens.BatterySection

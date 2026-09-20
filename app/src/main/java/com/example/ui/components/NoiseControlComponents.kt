@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.NoiseControlPositions
+import com.example.data.model.NoiseControlState
 import com.example.data.model.NoiseMode
 import com.example.ui.theme.SegmentedDark
 import com.example.ui.theme.SelectedDarkIcon
@@ -38,19 +40,21 @@ import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.UnselectedLightIcon
 
 /**
- * 10-level segmented level slider matching the user screenshot:
- * A dark bar with 10 columns separated by dividers.
- * The active/selected level is highlighted with an icon/box.
+ * Official HOCO EQ34 Plus noise control progress bar (0-10).
+ *
+ * From hoco.music_1.3.5-gp.apks (ii8.java):
+ *   Progress:  0   1   2   3   4   [5]   6   7   8   9   10
+ *   Mode:      TRANSPARENCY       STANDARD    ANC
+ *   Level:     4→0 (strong→weak)  N/A         0→4 (weak→strong)
  */
 @Composable
 fun SegmentedNoiseLevelSelector(
-    currentLevel: Int,
+    noiseState: NoiseControlState,
     enabled: Boolean,
-    onLevelSelected: (Int) -> Unit,
+    onProgressSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val totalLevels = 10
-    val activeLevel = currentLevel.coerceIn(1, totalLevels)
+    val currentProgress = noiseState.uiProgress
 
     Box(
         modifier = modifier
@@ -64,14 +68,16 @@ fun SegmentedNoiseLevelSelector(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            for (level in 1..totalLevels) {
-                val isSelected = (level == activeLevel)
+            // Progress 0-4 (Transparency range)
+            for (progress in 0..4) {
+                val isSelected = (progress == currentProgress)
+                val modeColor = if (isSelected) Color(0xFF3B82F6) else Color(0xFFC4C7CF)
 
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
-                        .clickable(enabled = enabled) { onLevelSelected(level) }
+                        .clickable(enabled = enabled) { onProgressSelected(progress) }
                         .then(
                             if (isSelected) {
                                 Modifier
@@ -82,20 +88,89 @@ fun SegmentedNoiseLevelSelector(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isSelected) {
-                        // Headphone / person icon inside active slot
-                        NoiseIndicatorMiniIcon(tint = Color.White)
+                        TransparencyMiniIcon(tint = modeColor)
                     } else {
                         Text(
-                            text = level.toString(),
+                            text = progress.toString(),
                             color = Color(0xFFC4C7CF),
                             fontSize = 13.sp,
-                            fontWeight = if (level == 10) FontWeight.Bold else FontWeight.Medium
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Vertical separator
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(28.dp)
+                        .background(Color(0xFF3F4048))
+                )
+            }
+
+            // Center: Progress 5 (Standard mode)
+            Box(
+                modifier = Modifier
+                    .weight(1.4f)
+                    .height(44.dp)
+                    .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) }
+                    .then(
+                        if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
+                            Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFF1F2024))
+                        } else Modifier
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
+                    StandardMiniIcon(tint = Color.White)
+                } else {
+                    StandardMiniIcon(tint = Color(0xFFC4C7CF))
+                }
+            }
+
+            // Vertical separator
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(28.dp)
+                    .background(Color(0xFF3F4048))
+            )
+
+            // Progress 6-10 (ANC range)
+            for (progress in 6..10) {
+                val isSelected = (progress == currentProgress)
+                val modeColor = if (isSelected) Color(0xFF10B981) else Color(0xFFC4C7CF)
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clickable(enabled = enabled) { onProgressSelected(progress) }
+                        .then(
+                            if (isSelected) {
+                                Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFF1F2024))
+                            } else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        AncMiniIcon(tint = modeColor)
+                    } else {
+                        Text(
+                            text = progress.toString(),
+                            color = Color(0xFFC4C7CF),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
                 // Vertical separator between segments
-                if (level < totalLevels) {
+                if (progress < 10) {
                     Box(
                         modifier = Modifier
                             .width(1.dp)
@@ -109,10 +184,15 @@ fun SegmentedNoiseLevelSelector(
 }
 
 /**
- * Noise Control Mode Item with round icon and label matching user screenshot:
+ * Noise Control Mode Item with round icon and label:
  * - Transparent Mode
- * - Standard Mode (Off)
- * - Noise Cancellation Mode (ANC)
+ * - Standard Mode
+ * - Noise Cancellation Mode
+ *
+ * Official mapping from c48.java:
+ * - Off button → progress 5 (Standard)
+ * - ANC button → progress 10 (max ANC)
+ * - Transparency button → progress 0 (max Transparency)
  */
 @Composable
 fun NoiseModeButton(
@@ -149,7 +229,7 @@ fun NoiseModeButton(
                 NoiseMode.TRANSPARENCY -> {
                     TransparencyCustomIcon(tint = if (isSelected) Color.White else Color(0xFF9E9EA7))
                 }
-                NoiseMode.OFF -> {
+                NoiseMode.STANDARD -> {
                     StandardCustomIcon(tint = if (isSelected) Color.White else Color(0xFF9E9EA7))
                 }
                 NoiseMode.ANC -> {
@@ -171,21 +251,119 @@ fun NoiseModeButton(
     }
 }
 
-/**
- * Headphone user icon with concentric waves (Transparency)
- */
-@Composable
-fun TransparencyCustomIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(28.dp)) {
-        val centerOffset = Offset(size.width / 2f, size.height / 2f)
+// ==================== MINI ICONS FOR SEGMENTED BAR ====================
 
-        // Head/user silhouette
+@Composable
+fun TransparencyMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawCircle(
+            color = tint,
+            radius = size.width * 0.18f,
+            center = Offset(size.width / 2f, size.height * 0.36f)
+        )
+        drawArc(
+            color = tint,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true,
+            topLeft = Offset(size.width * 0.18f, size.height * 0.56f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.40f)
+        )
+        drawCircle(
+            color = tint,
+            radius = size.width * 0.10f,
+            center = Offset(size.width * 0.20f, size.height * 0.36f)
+        )
+        drawCircle(
+            color = tint,
+            radius = size.width * 0.10f,
+            center = Offset(size.width * 0.80f, size.height * 0.36f)
+        )
+    }
+}
+
+@Composable
+fun StandardMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawCircle(
+            color = tint,
+            radius = size.width * 0.17f,
+            center = Offset(size.width / 2f, size.height * 0.38f)
+        )
+        drawArc(
+            color = tint,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true,
+            topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f)
+        )
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+        )
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(size.width * 0.74f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+        )
+    }
+}
+
+@Composable
+fun AncMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawArc(
+            color = tint,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(size.width * 0.18f, size.height * 0.08f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.60f),
+            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
+        )
         drawCircle(
             color = tint,
             radius = size.width * 0.16f,
             center = Offset(size.width / 2f, size.height * 0.38f)
         )
-        // Shoulders / chest arc
+        drawArc(
+            color = tint,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true,
+            topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f)
+        )
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+        )
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(size.width * 0.74f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+        )
+    }
+}
+
+// ==================== FULL SIZE ICONS FOR MODE BUTTONS ====================
+
+@Composable
+fun TransparencyCustomIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(28.dp)) {
+        val centerOffset = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(
+            color = tint,
+            radius = size.width * 0.16f,
+            center = Offset(size.width / 2f, size.height * 0.38f)
+        )
         drawArc(
             color = tint,
             startAngle = 180f,
@@ -194,8 +372,6 @@ fun TransparencyCustomIcon(tint: Color) {
             topLeft = Offset(size.width * 0.22f, size.height * 0.58f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.56f, size.height * 0.35f)
         )
-
-        // Dotted / sound transmission rays
         val radiusOuter = size.width * 0.44f
         for (angle in listOf(-140f, -110f, -70f, -40f, 0f, 40f, 70f, 110f, 140f, 180f)) {
             val rad = Math.toRadians(angle.toDouble())
@@ -210,19 +386,14 @@ fun TransparencyCustomIcon(tint: Color) {
     }
 }
 
-/**
- * Standard mode: Person with side headphone earcups (Standard Mode)
- */
 @Composable
 fun StandardCustomIcon(tint: Color) {
     Canvas(modifier = Modifier.size(28.dp)) {
-        // Head
         drawCircle(
             color = tint,
             radius = size.width * 0.17f,
             center = Offset(size.width / 2f, size.height * 0.38f)
         )
-        // Shoulders
         drawArc(
             color = tint,
             startAngle = 180f,
@@ -231,7 +402,6 @@ fun StandardCustomIcon(tint: Color) {
             topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f)
         )
-        // Left & Right Earcups
         drawRoundRect(
             color = tint,
             topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
@@ -247,13 +417,9 @@ fun StandardCustomIcon(tint: Color) {
     }
 }
 
-/**
- * Active ANC mode: Solid Person wearing over-ear headset with headband
- */
 @Composable
 fun AncCustomIcon(tint: Color) {
     Canvas(modifier = Modifier.size(28.dp)) {
-        // Headband arch
         drawArc(
             color = tint,
             startAngle = 180f,
@@ -263,14 +429,11 @@ fun AncCustomIcon(tint: Color) {
             size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.60f),
             style = Stroke(width = 2.4.dp.toPx(), cap = StrokeCap.Round)
         )
-
-        // Head
         drawCircle(
             color = tint,
             radius = size.width * 0.16f,
             center = Offset(size.width / 2f, size.height * 0.38f)
         )
-        // Shoulders
         drawArc(
             color = tint,
             startAngle = 180f,
@@ -279,55 +442,17 @@ fun AncCustomIcon(tint: Color) {
             topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f)
         )
-
-        // Left earcup
         drawRoundRect(
             color = tint,
             topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
         )
-        // Right earcup
         drawRoundRect(
             color = tint,
             topLeft = Offset(size.width * 0.74f, size.height * 0.26f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
-        )
-    }
-}
-
-/**
- * Mini headphone user icon for the segmented level bar
- */
-@Composable
-fun NoiseIndicatorMiniIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(16.dp)) {
-        // Head
-        drawCircle(
-            color = tint,
-            radius = size.width * 0.18f,
-            center = Offset(size.width / 2f, size.height * 0.36f)
-        )
-        // Shoulders
-        drawArc(
-            color = tint,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true,
-            topLeft = Offset(size.width * 0.18f, size.height * 0.56f),
-            size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.40f)
-        )
-        // Left & Right small ear cushions
-        drawCircle(
-            color = tint,
-            radius = size.width * 0.10f,
-            center = Offset(size.width * 0.20f, size.height * 0.36f)
-        )
-        drawCircle(
-            color = tint,
-            radius = size.width * 0.10f,
-            center = Offset(size.width * 0.80f, size.height * 0.36f)
         )
     }
 }

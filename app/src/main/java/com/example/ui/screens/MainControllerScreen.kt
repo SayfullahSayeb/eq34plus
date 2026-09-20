@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,6 +64,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -93,19 +95,16 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.ConnectionStatus
 import com.example.data.HocoBleController
-import com.example.data.model.AncSettings
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.HocoDevice
+import com.example.data.model.NoiseControlState
 import com.example.data.model.NoiseMode
 import com.example.ui.HocoViewModel
 import com.example.ui.components.CompactConnectionStatusBar
+import com.example.ui.components.ConnectionDialogOverlay
 import com.example.ui.components.EarbudsHeroDisplay
-import com.example.ui.components.HocoBottomNavBar
 import com.example.ui.components.HocoTopBar
-import com.example.ui.components.NoiseModeButton
 import com.example.ui.components.ScreenshotAccurateNoiseCard
-import com.example.ui.components.SegmentedNoiseLevelSelector
-import com.example.ui.components.SubFeatureTabsRow
 import com.example.ui.theme.AudioDarkBackground
 import com.example.ui.theme.AudioDarkSurface
 import com.example.ui.theme.AudioDarkSurfaceBorder
@@ -133,7 +132,7 @@ fun MainControllerScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val connectedDevice by viewModel.connectedDevice.collectAsState()
     val batteryState by viewModel.batteryState.collectAsState()
-    val ancSettings by viewModel.ancSettings.collectAsState()
+    val noiseState by viewModel.noiseState.collectAsState()
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val pairedDevices by viewModel.pairedDevices.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
@@ -143,9 +142,24 @@ fun MainControllerScreen(
     val lastCommandResult by viewModel.lastCommandResult.collectAsState()
 
     var showLogs by remember { mutableStateOf(false) }
-    var selectedSubTab by remember { mutableStateOf(0) }
-    var selectedBottomNav by remember { mutableStateOf(0) }
     var showDeviceSheet by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameName by remember { mutableStateOf("") }
+    var showConnectDialog by remember { mutableStateOf(false) }
+    var pendingConnectDevice by remember { mutableStateOf<android.bluetooth.BluetoothDevice?>(null) }
+
+    // Auto-show connect dialog when a HOCO device is discovered and we're not connected
+    LaunchedEffect(discoveredDevices, connectionState) {
+        if (connectionState == ConnectionStatus.DISCONNECTED) {
+            val hocoDevice = discoveredDevices.firstOrNull {
+                it.name.contains("HOCO", ignoreCase = true) || it.name.contains("EQ34", ignoreCase = true)
+            }
+            if (hocoDevice != null && !showConnectDialog) {
+                pendingConnectDevice = hocoDevice.device
+                showConnectDialog = true
+            }
+        }
+    }
 
     // Controls are only enabled when device is identified and ready
     val controlsEnabled = connectionState == ConnectionStatus.READY
@@ -192,6 +206,12 @@ fun MainControllerScreen(
                 },
                 onSettingsClick = {
                     showLogs = !showLogs
+                },
+                onTitleClick = {
+                    if (controlsEnabled) {
+                        renameName = connectedDevice?.name ?: ""
+                        showRenameDialog = true
+                    }
                 }
             )
 
@@ -228,22 +248,19 @@ fun MainControllerScreen(
                     EarbudsHeroDisplay(batteryState = batteryState)
                 }
 
-                // 3. Sub-feature icon tabs row (Sound wave | Equalizer | Touch)
-                item {
-                    SubFeatureTabsRow(
-                        selectedTabIndex = selectedSubTab,
-                        onTabSelected = { selectedSubTab = it }
-                    )
-                }
-
-                // 4. White Card: "Noise Control" + 1..10 segmented bar + 3 rounded buttons
+                // 3. White Card: "Noise Control" + 1..10 segmented bar + 3 rounded buttons
                 item {
                     ScreenshotAccurateNoiseCard(
-                        ancSettings = ancSettings,
+                        noiseState = noiseState,
                         isConnected = controlsEnabled,
-                        isPendingVerification = ancSettings.isPendingVerification,
-                        onModeSelect = { mode -> viewModel.setNoiseMode(mode) },
-                        onLevelChange = { level -> viewModel.setAncLevel(level) }
+                        onProgressSelected = { progress -> viewModel.setNoiseProgress(progress) },
+                        onModeSelect = { mode ->
+                            when (mode) {
+                                NoiseMode.STANDARD -> viewModel.setStandardMode()
+                                NoiseMode.ANC -> viewModel.setNoiseProgress(10)
+                                NoiseMode.TRANSPARENCY -> viewModel.setNoiseProgress(0)
+                            }
+                        }
                     )
                 }
 
@@ -310,13 +327,64 @@ fun MainControllerScreen(
                     }
                 }
             }
+        }
 
-            // 5. Bottom Navigation Bar matching screenshot: Home | Music | Mine
-            HocoBottomNavBar(
-                selectedTab = selectedBottomNav,
-                onTabSelected = { selectedBottomNav = it }
+        // Rename dialog
+        if (showRenameDialog) {
+            AlertDialog(
+                onDismissRequest = { showRenameDialog = false },
+                title = { Text("Rename Device") },
+                text = {
+                    OutlinedTextField(
+                        value = renameName,
+                        onValueChange = { renameName = it },
+                        label = { Text("Device name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.renameDevice(renameName)
+                            showRenameDialog = false
+                        },
+                        enabled = renameName.isNotBlank() && renameName.length <= 32
+                    ) {
+                        Text("Rename")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRenameDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
+
+        // Connection popup overlay
+        ConnectionDialogOverlay(
+            show = showConnectDialog,
+            deviceName = pendingConnectDevice?.let {
+                try { it.name ?: "HOCO EQ34 Plus" } catch (_: Exception) { "HOCO EQ34 Plus" }
+            } ?: "HOCO EQ34 Plus",
+            isConnected = connectionState == ConnectionStatus.READY,
+            isConnecting = connectionState == ConnectionStatus.CONNECTING || connectionState == ConnectionStatus.IDENTIFYING,
+            batteryState = batteryState,
+            onConnect = {
+                pendingConnectDevice?.let { device ->
+                    viewModel.connect(device)
+                }
+            },
+            onCancel = {
+                showConnectDialog = false
+                pendingConnectDevice = null
+            },
+            onDismiss = {
+                showConnectDialog = false
+                pendingConnectDevice = null
+            }
+        )
     }
 }
 
@@ -774,10 +842,10 @@ fun BatteryGaugeItem(
 
 @Composable
 fun NoiseControlSection(
-    ancSettings: AncSettings,
+    noiseState: NoiseControlState,
     isConnected: Boolean,
     onModeSelect: (NoiseMode) -> Unit,
-    onLevelChange: (Int) -> Unit
+    onProgressSelected: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -803,7 +871,7 @@ fun NoiseControlSection(
                 )
                 if (isConnected) {
                     Text(
-                        text = "Active: ${ancSettings.currentMode.displayName}",
+                        text = "Active: ${noiseState.mode.displayName}",
                         style = MaterialTheme.typography.labelSmall.copy(color = CyanAccent)
                     )
                 }
@@ -824,19 +892,19 @@ fun NoiseControlSection(
                     title = "ANC",
                     subtitle = "Noise Cancel",
                     icon = Icons.Default.Security,
-                    isSelected = ancSettings.currentMode == NoiseMode.ANC,
+                    isSelected = noiseState.mode == NoiseMode.ANC,
                     enabled = isConnected,
                     onClick = { onModeSelect(NoiseMode.ANC) },
                     modifier = Modifier.weight(1f)
                 )
 
                 NoiseModeTab(
-                    title = "Off",
+                    title = "Standard",
                     subtitle = "Normal",
                     icon = Icons.Default.VolumeUp,
-                    isSelected = ancSettings.currentMode == NoiseMode.OFF,
+                    isSelected = noiseState.mode == NoiseMode.STANDARD,
                     enabled = isConnected,
-                    onClick = { onModeSelect(NoiseMode.OFF) },
+                    onClick = { onModeSelect(NoiseMode.STANDARD) },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -844,7 +912,7 @@ fun NoiseControlSection(
                     title = "Transparency",
                     subtitle = "Ambient",
                     icon = Icons.Default.Hearing,
-                    isSelected = ancSettings.currentMode == NoiseMode.TRANSPARENCY,
+                    isSelected = noiseState.mode == NoiseMode.TRANSPARENCY,
                     enabled = isConnected,
                     onClick = { onModeSelect(NoiseMode.TRANSPARENCY) },
                     modifier = Modifier.weight(1f)
@@ -853,7 +921,7 @@ fun NoiseControlSection(
 
             // ANC Gain slider (visible when ANC is active)
             AnimatedVisibility(
-                visible = ancSettings.currentMode == NoiseMode.ANC,
+                visible = noiseState.mode == NoiseMode.ANC,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -892,7 +960,7 @@ fun NoiseControlSection(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "Level ${ancSettings.gainLevel} / 10",
+                                text = "Level ${noiseState.internalLevel + 1} / 5",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = CyanAccent
@@ -904,12 +972,13 @@ fun NoiseControlSection(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Slider(
-                        value = ancSettings.gainLevel.toFloat(),
+                        value = noiseState.uiProgress.toFloat(),
                         onValueChange = { newValue ->
-                            onLevelChange(newValue.toInt().coerceIn(1, 10))
+                            val progress = newValue.toInt().coerceIn(6, 10)
+                            onProgressSelected(progress)
                         },
-                        valueRange = 1f..10f,
-                        steps = 8,
+                        valueRange = 6f..10f,
+                        steps = 3,
                         enabled = isConnected,
                         colors = SliderDefaults.colors(
                             thumbColor = CyanAccent,
@@ -924,8 +993,8 @@ fun NoiseControlSection(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Low (1)", style = MaterialTheme.typography.labelSmall.copy(color = TextSecondaryDark))
-                        Text("Moderate (5)", style = MaterialTheme.typography.labelSmall.copy(color = TextSecondaryDark))
-                        Text("Max (10)", style = MaterialTheme.typography.labelSmall.copy(color = TextSecondaryDark))
+                        Text("Moderate (3)", style = MaterialTheme.typography.labelSmall.copy(color = TextSecondaryDark))
+                        Text("Max (5)", style = MaterialTheme.typography.labelSmall.copy(color = TextSecondaryDark))
                     }
                 }
             }

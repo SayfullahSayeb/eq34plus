@@ -5,9 +5,10 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.util.Log
-import com.example.data.model.AncSettings
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.HocoDevice
+import com.example.data.model.NoiseControlState
+import com.example.data.model.NoiseControlPositions
 import com.example.data.model.NoiseMode
 import com.example.data.safety.CommandWhitelist
 import com.example.data.safety.DeviceIdentifier
@@ -23,6 +24,7 @@ import com.jieli.bluetooth.interfaces.rcsp.callback.BTRcspEventCallback
 import com.jieli.bluetooth.interfaces.rcsp.callback.OnRcspActionCallback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,20 +43,10 @@ enum class ConnectionStatus {
     READY
 }
 
-/**
- * Hardened BLE controller for HOCO EQ34 Plus.
- *
- * Safety features:
- * - Device identification before any write commands
- * - Command whitelist enforcement
- * - Read-back verification (no optimistic UI updates)
- * - Safe connection sequence (identify first, then enable controls)
- * - No firmware/OTA/flash operations
- * - No raw BLE packet sending
- */
 class HocoBleController private constructor(private val appContext: Context) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private val rcspController: RCSPController? = try {
         if (RCSPController.isInit()) RCSPController.getInstance() else null
     } catch (e: Throwable) {
@@ -70,8 +62,8 @@ class HocoBleController private constructor(private val appContext: Context) {
     private val _batteryState = MutableStateFlow(BatteryInfoModel())
     val batteryState: StateFlow<BatteryInfoModel> = _batteryState.asStateFlow()
 
-    private val _ancSettings = MutableStateFlow(AncSettings())
-    val ancSettings: StateFlow<AncSettings> = _ancSettings.asStateFlow()
+    private val _noiseState = MutableStateFlow(NoiseControlState())
+    val noiseState: StateFlow<NoiseControlState> = _noiseState.asStateFlow()
 
     private val _discoveredDevices = MutableStateFlow<List<HocoDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<HocoDevice>> = _discoveredDevices.asStateFlow()
@@ -101,13 +93,9 @@ class HocoBleController private constructor(private val appContext: Context) {
         data class DeviceNotVerified(val message: String) : CommandResult()
     }
 
-    private var cachedVoiceMode: VoiceMode? = null
     private var rawLeftMax: Int = 10
+    private var commandDebounceJob: Job? = null
 
-    /**
-     * Checks if it is safe to send write commands to the device.
-     * Returns true only if the device has been positively identified as EQ34 Plus.
-     */
     private fun isSafeToSendCommands(): Boolean {
         val result = _deviceIdentification.value
         if (!DeviceIdentifier.isVerified(result)) {
@@ -133,7 +121,7 @@ class HocoBleController private constructor(private val appContext: Context) {
                         isConnected = true,
                         isBonded = isDeviceBonded(device)
                     )
-                    addLog("Connected to $devName. Starting safe identification sequence...")
+                    addLog("Connected to $devName. Starting identification...")
                     scope.launch {
                         performSafeIdentificationSequence(device)
                     }
@@ -191,29 +179,38 @@ class HocoBleController private constructor(private val appContext: Context) {
 
         override fun onCurrentVoiceMode(device: BluetoothDevice?, voiceMode: VoiceMode?) {
             voiceMode?.let {
-                cachedVoiceMode = it
                 val noiseMode = NoiseMode.fromModeId(it.mode)
-                val max = if (it.leftMax > 0) it.leftMax else 10
-                rawLeftMax = max
-                val curVal = it.leftCurVal
-                val mappedGain = if (max > 0) {
-                    ((curVal.toFloat() / max.toFloat()) * 10).toInt().coerceIn(1, 10)
-                } else 5
+                val maxLevel = if (it.leftMax > 0) it.leftMax else rawLeftMax
+                rawLeftMax = maxLevel
+                val internalLevel = it.leftCurVal
 
                 addLog("VoiceMode read-back: ${noiseMode.displayName} (mode=${it.mode}, " +
-                    "curVal=$curVal, max=$max, mappedGain=$mappedGain)")
-                _ancSettings.value = _ancSettings.value.copy(
-                    currentMode = noiseMode,
-                    gainLevel = mappedGain,
-                    rawLeftCurVal = curVal,
-                    rawLeftMax = max,
-                    lastConfirmedMode = noiseMode,
-                    lastConfirmedLevel = mappedGain,
-                    isPendingVerification = false
+                    "internalLevel=$internalLevel, maxLevel=$maxLevel)")
+
+                val confirmedState = _noiseState.value.confirmFromDevice(
+                    mode = noiseMode,
+                    leftCurVal = internalLevel,
+                    maxLevel = maxLevel
                 )
-                _lastCommandResult.value = CommandResult.Success(
-                    "State confirmed: ${noiseMode.displayName}, Level $mappedGain/10"
-                )
+
+                val pendingProg = _noiseState.value.pendingProgress
+                if (pendingProg != null && confirmedState.uiProgress == pendingProg) {
+                    addLog("CONFIRMED: progress $pendingProg matches device read-back")
+                    _lastCommandResult.value = CommandResult.Success(
+                        "${noiseMode.displayName} confirmed at progress ${confirmedState.uiProgress}"
+                    )
+                } else if (pendingProg != null && confirmedState.uiProgress != pendingProg) {
+                    addLog("MISMATCH: requested progress $pendingProg but device reports ${confirmedState.uiProgress}")
+                    _lastCommandResult.value = CommandResult.Failed(
+                        "Mismatch: requested $pendingProg, device reports ${confirmedState.uiProgress}"
+                    )
+                } else {
+                    _lastCommandResult.value = CommandResult.Success(
+                        "State read: ${noiseMode.displayName}, level $internalLevel/$maxLevel"
+                    )
+                }
+
+                _noiseState.value = confirmedState
             }
         }
 
@@ -223,9 +220,7 @@ class HocoBleController private constructor(private val appContext: Context) {
                 val ancMode = list.firstOrNull { it.mode == VoiceMode.VOICE_MODE_DENOISE }
                 if (ancMode != null && ancMode.leftMax > 0) {
                     rawLeftMax = ancMode.leftMax
-                    _ancSettings.value = _ancSettings.value.copy(
-                        rawLeftMax = ancMode.leftMax
-                    )
+                    _noiseState.value = _noiseState.value.copy(maxInternalLevel = ancMode.leftMax)
                 }
             }
         }
@@ -282,22 +277,10 @@ class HocoBleController private constructor(private val appContext: Context) {
         }
     }
 
-    /**
-     * SAFE CONNECTION SEQUENCE:
-     * 1. Connect
-     * 2. Wait for RCSP initialization
-     * 3. Read device info (IDENTIFY)
-     * 4. Read battery
-     * 5. Read ANC state
-     * 6. Only then set READY state (controls enabled)
-     *
-     * If identification fails, controls remain disabled.
-     */
     private suspend fun performSafeIdentificationSequence(device: BluetoothDevice) {
         _connectionState.value = ConnectionStatus.IDENTIFYING
         addLog("=== SAFE IDENTIFICATION SEQUENCE ===")
 
-        // Step 1: Wait for RCSP to initialize
         addLog("Step 1: Waiting for RCSP initialization...")
         var retries = 0
         while (retries < 20) {
@@ -314,15 +297,12 @@ class HocoBleController private constructor(private val appContext: Context) {
             return
         }
 
-        // Step 2: Query device info for identification
         addLog("Step 2: Querying device info for identification...")
         rcspController?.getAllDeviceSettingsInfo(device, object : OnRcspActionCallback<ADVInfoResponse> {
             override fun onSuccess(dev: BluetoothDevice?, message: ADVInfoResponse?) {
                 addLog("Device settings received. Performing identification...")
-
-                // Perform deep identification
                 val name = getDeviceName(dev)
-                val hasAnc = true // TWS earbuds from HOCO with RCSP voice modes support ANC
+                val hasAnc = true
 
                 val identification = DeviceIdentifier.identifyFromDeviceInfo(
                     device = dev ?: device,
@@ -336,7 +316,6 @@ class HocoBleController private constructor(private val appContext: Context) {
 
                 if (DeviceIdentifier.isVerified(identification)) {
                     addLog("IDENTIFIED: $name is a verified EQ34 Plus")
-                    // Continue with safe reads
                     scope.launch { performSafeReads(device) }
                 } else {
                     val reason = (identification as? DeviceIdentifier.IdentificationResult.Unverified)?.reason
@@ -352,8 +331,6 @@ class HocoBleController private constructor(private val appContext: Context) {
 
             override fun onError(dev: BluetoothDevice?, error: BaseError?) {
                 addLog("Device info query error: ${error?.message}")
-
-                // If we can't get device info, attempt name-only identification
                 val name = getDeviceName(dev ?: device)
                 val identification = DeviceIdentifier.identifyFromScan(dev ?: device, name)
                 _deviceIdentification.value = identification
@@ -372,13 +349,9 @@ class HocoBleController private constructor(private val appContext: Context) {
         })
     }
 
-    /**
-     * Safe reads: battery, ANC state. No writes performed.
-     */
     private suspend fun performSafeReads(device: BluetoothDevice) {
         addLog("Step 3: Reading current state (read-only)...")
 
-        // Read battery
         rcspController?.getAllDeviceSettingsInfo(device, object : OnRcspActionCallback<ADVInfoResponse> {
             override fun onSuccess(dev: BluetoothDevice?, message: ADVInfoResponse?) {
                 message?.let { adv ->
@@ -397,7 +370,6 @@ class HocoBleController private constructor(private val appContext: Context) {
             }
         })
 
-        // Read current voice mode
         rcspController?.getCurrentVoiceMode(device, object : OnRcspActionCallback<Boolean> {
             override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
                 addLog("ANC state read complete")
@@ -407,7 +379,6 @@ class HocoBleController private constructor(private val appContext: Context) {
             }
         })
 
-        // Read all voice modes (for max level info)
         rcspController?.getAllVoiceModes(device, object : OnRcspActionCallback<Boolean> {
             override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
                 addLog("Voice modes read complete")
@@ -417,29 +388,170 @@ class HocoBleController private constructor(private val appContext: Context) {
             }
         })
 
-        // Allow time for callbacks to complete
         delay(1000)
 
-        // Now enable controls
         _connectionState.value = ConnectionStatus.READY
         addLog("=== IDENTIFICATION AND STATE READ COMPLETE ===")
         addLog("Controls are now enabled.")
+    }
+
+    fun setStandardMode() {
+        if (!isSafeToSendCommands()) {
+            _lastCommandResult.value = CommandResult.DeviceNotVerified(
+                "Cannot change noise control: Device not verified as EQ34 Plus."
+            )
+            return
+        }
+        setNoiseProgress(NoiseControlPositions.STANDARD_PROGRESS)
+    }
+
+    fun renameDevice(newName: String) {
+        if (!isSafeToSendCommands()) {
+            _lastCommandResult.value = CommandResult.DeviceNotVerified(
+                "Cannot rename: Device not verified as EQ34 Plus."
+            )
+            return
+        }
+
+        if (!CommandWhitelist.isPermitted(CommandWhitelist.SafeCommand.RENAME_DEVICE)) {
+            addLog("SAFETY: RENAME_DEVICE not in whitelist")
+            _lastCommandResult.value = CommandResult.Failed("Rename not permitted")
+            return
+        }
+
+        if (newName.isBlank() || newName.length > 32) {
+            _lastCommandResult.value = CommandResult.Failed("Name must be 1-32 characters")
+            return
+        }
+
+        val ctrl = rcspController
+        val device = _connectedDevice.value?.device ?: ctrl?.usingDevice
+        if (device == null || ctrl == null) {
+            addLog("Cannot rename: No device connected")
+            _lastCommandResult.value = CommandResult.Failed("No device connected")
+            return
+        }
+
+        addLog("Renaming device to: $newName")
+        _lastCommandResult.value = CommandResult.Idle
+
+        ctrl.configDeviceName(device, newName, object : OnRcspActionCallback<Int> {
+            override fun onSuccess(dev: BluetoothDevice?, message: Int?) {
+                addLog("Rename successful: $newName")
+                _connectedDevice.value = _connectedDevice.value?.copy(name = newName)
+                _lastCommandResult.value = CommandResult.Success("Renamed to $newName")
+            }
+
+            override fun onError(dev: BluetoothDevice?, error: BaseError?) {
+                addLog("Rename failed: ${error?.message}")
+                _lastCommandResult.value = CommandResult.Failed(
+                    "Failed to rename to $newName",
+                    error?.message
+                )
+            }
+        })
+    }
+
+    /**
+     * Set noise control by official progress position (0-10).
+     *
+     * Official mapping from hoco.music_1.3.5-gp.apks (ii8.java):
+     * - Progress 0-4: Transparency, level = 4 - progress
+     * - Progress 5:   Standard (off)
+     * - Progress 6-10: ANC, level = progress - 6
+     */
+    fun setNoiseProgress(progress: Int) {
+        if (!isSafeToSendCommands()) {
+            _lastCommandResult.value = CommandResult.DeviceNotVerified(
+                "Cannot change noise control: Device not verified as EQ34 Plus."
+            )
+            return
+        }
+
+        if (!CommandWhitelist.isPermitted(CommandWhitelist.SafeCommand.SET_ANC_MODE) &&
+            !CommandWhitelist.isPermitted(CommandWhitelist.SafeCommand.SET_ANC_LEVEL)) {
+            addLog("SAFETY: Neither SET_ANC_MODE nor SET_ANC_LEVEL in whitelist")
+            _lastCommandResult.value = CommandResult.Failed("Command not permitted")
+            return
+        }
+
+        if (!NoiseControlPositions.isValidProgress(progress)) {
+            addLog("Invalid progress: $progress (must be 0-10)")
+            _lastCommandResult.value = CommandResult.Failed("Invalid progress: $progress")
+            return
+        }
+
+        commandDebounceJob?.cancel()
+
+        commandDebounceJob = scope.launch {
+            delay(150)
+
+            val ctrl = rcspController
+            val device = _connectedDevice.value?.device ?: ctrl?.usingDevice
+            if (device == null || ctrl == null) {
+                addLog("Cannot set noise progress: No device connected")
+                _lastCommandResult.value = CommandResult.Failed("No device connected")
+                return@launch
+            }
+
+            _noiseState.value = _noiseState.value.requestProgress(progress)
+
+            val mode = NoiseControlPositions.modeForProgress(progress)
+            val maxLevel = if (rawLeftMax > 0) rawLeftMax else 10
+            val internalLevel = NoiseControlPositions.deviceLevelForProgress(progress, maxLevel)
+
+            val voiceMode = VoiceMode()
+                .setMode(mode.modeId)
+                .setLeftMax(maxLevel)
+                .setRightMax(maxLevel)
+                .setLeftCurVal(internalLevel)
+                .setRightCurVal(internalLevel)
+
+            addLog("Sending progress=$progress: ${mode.displayName} level=$internalLevel (max=$maxLevel)")
+            _lastCommandResult.value = CommandResult.Idle
+
+            ctrl.setCurrentVoiceMode(device, voiceMode, object : OnRcspActionCallback<Boolean> {
+                override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
+                    addLog("Progress $progress ACK received for ${mode.displayName}")
+                }
+
+                override fun onError(dev: BluetoothDevice?, error: BaseError?) {
+                    addLog("Progress $progress error: ${error?.message}")
+                    _noiseState.value = _noiseState.value.copy(
+                        isPendingVerification = false,
+                        pendingProgress = null
+                    )
+                    _lastCommandResult.value = CommandResult.Failed(
+                        "Failed to set progress $progress: ${mode.displayName}",
+                        error?.message
+                    )
+                    scope.launch { readCurrentState(device) }
+                }
+            })
+        }
+    }
+
+    private suspend fun readCurrentState(device: BluetoothDevice) {
+        rcspController?.getCurrentVoiceMode(device, object : OnRcspActionCallback<Boolean> {
+            override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
+                addLog("State re-read after error")
+            }
+            override fun onError(dev: BluetoothDevice?, error: BaseError?) {
+                addLog("State re-read error: ${error?.message}")
+            }
+        })
     }
 
     private fun handleDisconnection() {
         _connectionState.value = ConnectionStatus.DISCONNECTED
         _connectedDevice.value = null
         _batteryState.value = BatteryInfoModel()
-        _ancSettings.value = AncSettings()
+        _noiseState.value = NoiseControlState()
         _deviceIdentification.value = DeviceIdentifier.IdentificationResult.NotAttempted
         _lastCommandResult.value = CommandResult.Idle
+        commandDebounceJob?.cancel()
+        commandDebounceJob = null
         addLog("Device disconnected. State reset.")
-    }
-
-    init {
-        rcspController?.addBTRcspEventCallback(rcspEventCallback)
-        refreshBondedDevices()
-        checkInitialConnectedDevice()
     }
 
     fun addLog(msg: String) {
@@ -541,159 +653,6 @@ class HocoBleController private constructor(private val appContext: Context) {
             ctrl.disconnectDevice(dev)
         }
         handleDisconnection()
-    }
-
-    /**
-     * Set noise mode with SAFETY CHECKS and READ-BACK VERIFICATION.
-     *
-     * 1. Verify device is identified
-     * 2. Verify command is whitelisted
-     * 3. Send command
-     * 4. Mark as pending verification
-     * 5. Read-back confirmation happens via onCurrentVoiceMode callback
-     */
-    fun setNoiseMode(targetMode: NoiseMode) {
-        if (!isSafeToSendCommands()) {
-            _lastCommandResult.value = CommandResult.DeviceNotVerified(
-                "Cannot change ANC mode: Device not verified as EQ34 Plus."
-            )
-            return
-        }
-
-        val ctrl = rcspController
-        val device = _connectedDevice.value?.device ?: ctrl?.usingDevice
-        if (device == null || ctrl == null) {
-            addLog("Cannot set noise mode: No device connected")
-            _lastCommandResult.value = CommandResult.Failed("No device connected")
-            return
-        }
-
-        if (!CommandWhitelist.isPermitted(CommandWhitelist.SafeCommand.SET_ANC_MODE)) {
-            addLog("SAFETY: SET_ANC_MODE not in whitelist")
-            _lastCommandResult.value = CommandResult.Failed("Command not permitted")
-            return
-        }
-
-        val max = if (rawLeftMax > 0) rawLeftMax else 10
-        val currentLevel = _ancSettings.value.gainLevel.coerceIn(1, 10)
-        val calculatedCurVal = (currentLevel * max) / 10
-
-        val mode = VoiceMode()
-            .setMode(targetMode.modeId)
-            .setLeftMax(max)
-            .setRightMax(max)
-            .setLeftCurVal(calculatedCurVal)
-            .setRightCurVal(calculatedCurVal)
-
-        addLog("Sending ANC Mode: ${targetMode.displayName} (mode=${targetMode.modeId}, " +
-            "gain=$currentLevel/10, curVal=$calculatedCurVal, max=$max)")
-
-        // Mark as pending verification - UI will show "Verifying..." until read-back confirms
-        _ancSettings.value = _ancSettings.value.copy(
-            isPendingVerification = true,
-            requestedMode = targetMode
-        )
-        _lastCommandResult.value = CommandResult.Idle
-
-        ctrl.setCurrentVoiceMode(device, mode, object : OnRcspActionCallback<Boolean> {
-            override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
-                addLog("ANC Mode ACK received for ${targetMode.displayName}")
-                // Read-back will happen via onCurrentVoiceMode callback
-            }
-
-            override fun onError(dev: BluetoothDevice?, error: BaseError?) {
-                addLog("ANC Mode error: ${error?.message}")
-                // Revert pending state - read back current state
-                _ancSettings.value = _ancSettings.value.copy(
-                    isPendingVerification = false
-                )
-                _lastCommandResult.value = CommandResult.Failed(
-                    "Failed to set ${targetMode.displayName}",
-                    error?.message
-                )
-                // Re-read current state to ensure UI matches device
-                scope.launch { readCurrentState(device) }
-            }
-        })
-    }
-
-    /**
-     * Set ANC gain level with SAFETY CHECKS and READ-BACK VERIFICATION.
-     */
-    fun setAncGainLevel(level: Int) {
-        if (!isSafeToSendCommands()) {
-            _lastCommandResult.value = CommandResult.DeviceNotVerified(
-                "Cannot change ANC level: Device not verified as EQ34 Plus."
-            )
-            return
-        }
-
-        val ctrl = rcspController
-        val coercedLevel = level.coerceIn(1, 10)
-        val device = _connectedDevice.value?.device ?: ctrl?.usingDevice
-        if (device == null || ctrl == null) {
-            addLog("Cannot set ANC level: No device connected")
-            _lastCommandResult.value = CommandResult.Failed("No device connected")
-            return
-        }
-
-        if (!CommandWhitelist.isPermitted(CommandWhitelist.SafeCommand.SET_ANC_LEVEL)) {
-            addLog("SAFETY: SET_ANC_LEVEL not in whitelist")
-            _lastCommandResult.value = CommandResult.Failed("Command not permitted")
-            return
-        }
-
-        val max = if (rawLeftMax > 0) rawLeftMax else 10
-        val calculatedCurVal = (coercedLevel * max) / 10
-
-        val mode = VoiceMode()
-            .setMode(VoiceMode.VOICE_MODE_DENOISE)
-            .setLeftMax(max)
-            .setRightMax(max)
-            .setLeftCurVal(calculatedCurVal)
-            .setRightCurVal(calculatedCurVal)
-
-        addLog("Sending ANC Level: $coercedLevel/10 (curVal=$calculatedCurVal, max=$max)")
-
-        // Mark as pending verification
-        _ancSettings.value = _ancSettings.value.copy(
-            isPendingVerification = true,
-            requestedLevel = coercedLevel
-        )
-        _lastCommandResult.value = CommandResult.Idle
-
-        ctrl.setCurrentVoiceMode(device, mode, object : OnRcspActionCallback<Boolean> {
-            override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
-                addLog("ANC Level $coercedLevel ACK received")
-                // Read-back will happen via onCurrentVoiceMode callback
-            }
-
-            override fun onError(dev: BluetoothDevice?, error: BaseError?) {
-                addLog("ANC Level error: ${error?.message}")
-                _ancSettings.value = _ancSettings.value.copy(
-                    isPendingVerification = false
-                )
-                _lastCommandResult.value = CommandResult.Failed(
-                    "Failed to set ANC Level $coercedLevel",
-                    error?.message
-                )
-                scope.launch { readCurrentState(device) }
-            }
-        })
-    }
-
-    /**
-     * Read current device state. Used after errors to re-sync.
-     */
-    private suspend fun readCurrentState(device: BluetoothDevice) {
-        rcspController?.getCurrentVoiceMode(device, object : OnRcspActionCallback<Boolean> {
-            override fun onSuccess(dev: BluetoothDevice?, message: Boolean?) {
-                addLog("State re-read after error")
-            }
-            override fun onError(dev: BluetoothDevice?, error: BaseError?) {
-                addLog("State re-read error: ${error?.message}")
-            }
-        })
     }
 
     @SuppressLint("MissingPermission")

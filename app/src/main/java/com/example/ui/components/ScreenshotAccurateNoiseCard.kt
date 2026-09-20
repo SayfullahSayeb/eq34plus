@@ -1,11 +1,7 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,19 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BluetoothSearching
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,52 +27,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
 import com.example.data.ConnectionStatus
-import com.example.data.model.AncSettings
-import com.example.data.model.HocoDevice
+import com.example.data.model.NoiseControlState
 import com.example.data.model.NoiseMode
+import com.example.data.model.HocoDevice
 import com.example.ui.theme.CleanCardBorder
 import com.example.ui.theme.CleanWhiteSurface
 import com.example.ui.theme.GreenBattery
 import com.example.ui.theme.OrangeBattery
-import com.example.ui.theme.PillBg
 import com.example.ui.theme.RedBattery
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
-/**
- * Clean white noise control card matching user reference image:
- * - "Noise Control" header
- * - 1..10 segmented level selector
- * - 3 circular mode buttons:
- *     [Transparent Mode]   [Standard Mode]   [Noise Cancellation Mode]
- */
 @Composable
 fun ScreenshotAccurateNoiseCard(
-    ancSettings: AncSettings,
+    noiseState: NoiseControlState,
     isConnected: Boolean,
-    isPendingVerification: Boolean = false,
+    onProgressSelected: (Int) -> Unit,
     onModeSelect: (NoiseMode) -> Unit,
-    onLevelChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CleanWhiteSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(CleanCardBorder))
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(CleanCardBorder)
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 20.dp)
         ) {
-            // Header: "Noise Control"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -102,16 +80,24 @@ fun ScreenshotAccurateNoiseCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(
-                                if (isPendingVerification) Color(0xFFFFF3CD) else Color(0xFFF3F4F6)
+                                if (noiseState.isPendingVerification) Color(0xFFFFF3CD)
+                                else Color(0xFFF3F4F6)
                             )
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (isPendingVerification) "Verifying..."
-                            else "Level ${ancSettings.gainLevel}/10",
+                            text = when {
+                                noiseState.isPendingVerification -> "Verifying..."
+                                noiseState.mode == NoiseMode.TRANSPARENCY ->
+                                    "Transparency ${noiseState.internalLevel}"
+                                noiseState.mode == NoiseMode.ANC ->
+                                    "ANC ${noiseState.internalLevel}"
+                                else -> "Standard"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isPendingVerification) Color(0xFF856404) else Color(0xFF4B5563)
+                            color = if (noiseState.isPendingVerification) Color(0xFF856404)
+                            else Color(0xFF4B5563)
                         )
                     }
                 }
@@ -119,19 +105,14 @@ fun ScreenshotAccurateNoiseCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 10-level segmented slider (always responsive, active slot highlighted with headphone icon)
             SegmentedNoiseLevelSelector(
-                currentLevel = ancSettings.gainLevel,
+                noiseState = noiseState,
                 enabled = isConnected,
-                onLevelSelected = onLevelChange
+                onProgressSelected = onProgressSelected
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 3 Mode items matching screenshot:
-            // 1. Transparent Mode
-            // 2. Standard Mode (Off)
-            // 3. Noise Cancellation Mode (ANC)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -140,7 +121,7 @@ fun ScreenshotAccurateNoiseCard(
                 NoiseModeButton(
                     title = "Transparent\nMode",
                     mode = NoiseMode.TRANSPARENCY,
-                    currentMode = ancSettings.currentMode,
+                    currentMode = noiseState.mode,
                     enabled = isConnected,
                     onSelect = onModeSelect,
                     modifier = Modifier.weight(1f)
@@ -148,8 +129,8 @@ fun ScreenshotAccurateNoiseCard(
 
                 NoiseModeButton(
                     title = "Standard\nMode",
-                    mode = NoiseMode.OFF,
-                    currentMode = ancSettings.currentMode,
+                    mode = NoiseMode.STANDARD,
+                    currentMode = noiseState.mode,
                     enabled = isConnected,
                     onSelect = onModeSelect,
                     modifier = Modifier.weight(1f)
@@ -158,7 +139,7 @@ fun ScreenshotAccurateNoiseCard(
                 NoiseModeButton(
                     title = "Noise Cancellation\nMode",
                     mode = NoiseMode.ANC,
-                    currentMode = ancSettings.currentMode,
+                    currentMode = noiseState.mode,
                     enabled = isConnected,
                     onSelect = onModeSelect,
                     modifier = Modifier.weight(1f)
@@ -168,9 +149,6 @@ fun ScreenshotAccurateNoiseCard(
     }
 }
 
-/**
- * Compact clean connection bar that integrates seamlessly with the white companion design
- */
 @Composable
 fun CompactConnectionStatusBar(
     connectionState: ConnectionStatus,
@@ -185,7 +163,9 @@ fun CompactConnectionStatusBar(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CleanWhiteSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(CleanCardBorder))
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(CleanCardBorder)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -243,7 +223,11 @@ fun CompactConnectionStatusBar(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (connectionState == ConnectionStatus.CONNECTED || connectionState == ConnectionStatus.READY || connectionState == ConnectionStatus.IDENTIFYING) {
+                if (connectionState == ConnectionStatus.CONNECTED ||
+                    connectionState == ConnectionStatus.READY ||
+                    connectionState == ConnectionStatus.IDENTIFYING ||
+                    connectionState == ConnectionStatus.CONNECTING
+                ) {
                     TextButton(
                         onClick = onDisconnectClick,
                         modifier = Modifier.testTag("compact_disconnect_btn")

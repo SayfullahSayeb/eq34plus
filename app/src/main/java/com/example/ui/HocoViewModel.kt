@@ -5,9 +5,9 @@ import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
 import com.example.data.ConnectionStatus
 import com.example.data.HocoBleController
-import com.example.data.model.AncSettings
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.HocoDevice
+import com.example.data.model.NoiseControlState
 import com.example.data.model.NoiseMode
 import com.example.data.safety.DeviceIdentifier
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +21,7 @@ class HocoViewModel(application: Application) : AndroidViewModel(application) {
     val connectionState: StateFlow<ConnectionStatus> = controller.connectionState
     val connectedDevice: StateFlow<HocoDevice?> = controller.connectedDevice
     val batteryState: StateFlow<BatteryInfoModel> = controller.batteryState
-    val ancSettings: StateFlow<AncSettings> = controller.ancSettings
+    val noiseState: StateFlow<NoiseControlState> = controller.noiseState
     val discoveredDevices: StateFlow<List<HocoDevice>> = controller.discoveredDevices
     val pairedDevices: StateFlow<List<HocoDevice>> = controller.pairedDevices
     val isScanning: StateFlow<Boolean> = controller.isScanning
@@ -59,11 +59,15 @@ class HocoViewModel(application: Application) : AndroidViewModel(application) {
         controller.disconnect()
     }
 
-    fun setNoiseMode(mode: NoiseMode) {
-        controller.setNoiseMode(mode)
+    fun setNoiseProgress(progress: Int) {
+        controller.setNoiseProgress(progress)
     }
 
-    fun setAncLevel(level: Int) {
-        controller.setAncGainLevel(level)
+    fun setStandardMode() {
+        controller.setStandardMode()
+    }
+
+    fun renameDevice(newName: String) {
+        controller.renameDevice(newName)
     }
 }
