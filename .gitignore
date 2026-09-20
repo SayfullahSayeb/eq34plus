@@ -16,6 +16,7 @@
 local.properties
 .env
 debug.keystore
+release.keystore
 tools/
 hoco_apk_analysis/
 *.apk

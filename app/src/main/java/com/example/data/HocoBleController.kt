@@ -107,23 +107,27 @@ class HocoBleController private constructor(private val appContext: Context) {
 
     private val rcspEventCallback = object : BTRcspEventCallback() {
         override fun onConnection(device: BluetoothDevice?, status: Int) {
-            val devName = getDeviceName(device)
-            val devAddr = device?.address ?: "Unknown"
+            val dev = device ?: run {
+                addLog("Connection event with null device, status=$status")
+                return
+            }
+            val devName = getDeviceName(dev)
+            val devAddr = dev.address ?: "Unknown"
             addLog("Connection event: dev=$devName ($devAddr), status=$status")
 
             when (status) {
                 StateCode.CONNECTION_OK, StateCode.CONNECTION_CONNECTED -> {
                     _connectionState.value = ConnectionStatus.CONNECTED
                     _connectedDevice.value = HocoDevice(
-                        device = device!!,
+                        device = dev,
                         name = devName,
                         address = devAddr,
                         isConnected = true,
-                        isBonded = isDeviceBonded(device)
+                        isBonded = isDeviceBonded(dev)
                     )
                     addLog("Connected to $devName. Starting identification...")
                     scope.launch {
-                        performSafeIdentificationSequence(device)
+                        performSafeIdentificationSequence(dev)
                     }
                 }
                 StateCode.CONNECTION_CONNECTING -> {
@@ -278,8 +282,9 @@ class HocoBleController private constructor(private val appContext: Context) {
     }
 
     private suspend fun performSafeIdentificationSequence(device: BluetoothDevice) {
-        _connectionState.value = ConnectionStatus.IDENTIFYING
-        addLog("=== SAFE IDENTIFICATION SEQUENCE ===")
+        try {
+            _connectionState.value = ConnectionStatus.IDENTIFYING
+            addLog("=== SAFE IDENTIFICATION SEQUENCE ===")
 
         addLog("Step 1: Waiting for RCSP initialization...")
         var retries = 0
@@ -347,6 +352,10 @@ class HocoBleController private constructor(private val appContext: Context) {
                 }
             }
         })
+        } catch (e: Exception) {
+            addLog("Identification sequence error: ${e.message}")
+            _connectionState.value = ConnectionStatus.CONNECTED
+        }
     }
 
     private suspend fun performSafeReads(device: BluetoothDevice) {
@@ -610,18 +619,27 @@ class HocoBleController private constructor(private val appContext: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun startScan() {
         val ctrl = rcspController
         if (ctrl == null) {
-            addLog("BLE Controller not ready")
+            addLog("BLE Controller not ready — RCSP not initialized")
             return
         }
         _discoveredDevices.value = emptyList()
         addLog("Starting BLE Scan...")
-        val success = ctrl.startBleScan(15000)
-        _isScanning.value = success
-        if (!success) {
-            addLog("Failed to start BLE Scan (Check Bluetooth/Location)")
+        try {
+            val success = ctrl.startBleScan(15000)
+            _isScanning.value = success
+            if (!success) {
+                addLog("Failed to start BLE Scan (Check Bluetooth/Location)")
+            }
+        } catch (e: SecurityException) {
+            addLog("Bluetooth permission denied: ${e.message}")
+            _isScanning.value = false
+        } catch (e: Exception) {
+            addLog("Scan error: ${e.message}")
+            _isScanning.value = false
         }
     }
 
@@ -631,18 +649,27 @@ class HocoBleController private constructor(private val appContext: Context) {
         _isScanning.value = false
     }
 
+    @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
         stopScan()
         val ctrl = rcspController
         if (ctrl == null) {
-            addLog("BLE Controller not ready")
+            addLog("BLE Controller not ready — RCSP not initialized")
             return
         }
         _connectionState.value = ConnectionStatus.CONNECTING
         _deviceIdentification.value = DeviceIdentifier.IdentificationResult.NotAttempted
         val name = getDeviceName(device)
         addLog("Connecting to $name (${device.address})...")
-        ctrl.connectDevice(device)
+        try {
+            ctrl.connectDevice(device)
+        } catch (e: SecurityException) {
+            addLog("Bluetooth permission denied: ${e.message}")
+            _connectionState.value = ConnectionStatus.DISCONNECTED
+        } catch (e: Exception) {
+            addLog("Connect error: ${e.message}")
+            _connectionState.value = ConnectionStatus.DISCONNECTED
+        }
     }
 
     fun disconnect() {

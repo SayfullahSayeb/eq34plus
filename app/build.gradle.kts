@@ -17,6 +17,26 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  signingConfigs {
+    create("release") {
+      val ksEnv = System.getenv("RELEASE_KEYSTORE")
+      if (ksEnv != null) {
+        storeFile = file("release.keystore")
+        storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: ""
+        keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "eq34plus"
+        keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: ""
+      } else {
+        val ksFile = file("release.keystore")
+        if (ksFile.exists()) {
+          storeFile = ksFile
+          storePassword = "eq34plus2024"
+          keyAlias = "eq34plus"
+          keyPassword = "eq34plus2024"
+        }
+      }
+    }
+  }
+
   buildTypes {
     debug {
       isMinifyEnabled = false
@@ -26,6 +46,10 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      val ksEnv = System.getenv("RELEASE_KEYSTORE")
+      if (ksEnv != null || file("release.keystore").exists()) {
+        signingConfig = signingConfigs.getByName("release")
+      }
     }
   }
   compileOptions {
