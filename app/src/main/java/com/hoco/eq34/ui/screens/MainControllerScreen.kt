@@ -1,9 +1,5 @@
 ﻿package com.hoco.eq34.ui.screens
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,23 +83,6 @@ fun MainControllerScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameName by remember { mutableStateOf("") }
 
-    val permissionsToRequest = arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    )
-
-    var hasPermissions by remember { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        hasPermissions = results.values.all { it }
-        if (hasPermissions) {
-            viewModel.refreshBondedDevices()
-            viewModel.startScan()
-        }
-    }
-
     val controlsEnabled = connectionState == ConnectionStatus.READY
     val isConnected = connectionState != ConnectionStatus.DISCONNECTED
 
@@ -125,10 +104,9 @@ fun MainControllerScreen(
                     onScanClick = {
                         if (isScanning) {
                             viewModel.stopScan()
-                        } else if (hasPermissions) {
-                            viewModel.startScan()
                         } else {
-                            permissionLauncher.launch(permissionsToRequest)
+                            viewModel.refreshBondedDevices()
+                            viewModel.startScan()
                         }
                     },
                     onConnectDevice = { device ->
