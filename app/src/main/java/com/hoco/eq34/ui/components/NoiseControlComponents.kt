@@ -16,11 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,11 +44,6 @@ import com.hoco.eq34.ui.theme.TextPrimary
 import com.hoco.eq34.ui.theme.TextSecondary
 import com.hoco.eq34.ui.theme.UnselectedLightIcon
 
-/**
- * Segmented noise level bar matching the original HOCO app.
- * 11 segments: 0-4 (Transparency), 5 (Standard), 6-10 (ANC)
- * Selected segment shows icon, unselected shows number.
- */
 @Composable
 fun SegmentedNoiseLevelSelector(
     noiseState: NoiseControlState,
@@ -50,9 +52,9 @@ fun SegmentedNoiseLevelSelector(
     modifier: Modifier = Modifier
 ) {
     val currentProgress = noiseState.uiProgress
+    var sliderValue by remember(currentProgress) { mutableFloatStateOf(currentProgress.toFloat()) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Current mode label + level
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -77,129 +79,88 @@ fun SegmentedNoiseLevelSelector(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Segmented bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 2.dp)
+        // Segmented visual bar behind slider
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Progress 0-4 (Transparency range)
-                for (progress in 0..4) {
-                    val isActive = (progress <= currentProgress)
-                    val isSelected = (progress == currentProgress)
-                    val segmentColor = when {
-                        isActive -> Color(0xFF4B5563)
-                        else -> Color(0xFFD1D5DB)
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(segmentColor)
-                            .clickable(enabled = enabled) { onProgressSelected(progress) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            when {
-                                currentProgress <= 4 -> TransparencyMiniIcon(tint = Color.White)
-                                currentProgress == 5 -> StandardMiniIcon(tint = Color.White)
-                                else -> AncMiniIcon(tint = Color.White)
-                            }
-                        } else {
-                            Text(
-                                text = progress.toString(),
-                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFF6B7280),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    // Vertical separator
-                    if (progress < 4) {
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(24.dp)
-                                .background(Color(0xFFD1D5DB))
-                        )
-                    }
-                }
-
-                // Center: Progress 5 (Standard mode)
+            for (i in 0..10) {
+                val isActive = i <= currentProgress
+                val segColor = if (isActive) Color(0xFF4B5563) else Color(0xFFD1D5DB)
                 Box(
                     modifier = Modifier
-                        .weight(1.4f)
+                        .weight(1f)
                         .height(50.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(
-                            if (currentProgress >= 5) Color(0xFF4B5563) else Color(0xFFD1D5DB)
-                        )
-                        .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) },
+                        .background(segColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (currentProgress == 5) {
-                        StandardMiniIcon(tint = Color.White)
-                    } else {
-                        StandardMiniIcon(tint = if (currentProgress > 5) Color.White.copy(alpha = 0.7f) else Color(0xFF6B7280))
-                    }
-                }
-
-                // Vertical separator
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(24.dp)
-                        .background(Color(0xFFD1D5DB))
-                )
-
-                // Progress 6-10 (ANC range)
-                for (progress in 6..10) {
-                    val isActive = (progress <= currentProgress)
-                    val isSelected = (progress == currentProgress)
-                    val segmentColor = when {
-                        isActive -> Color(0xFF4B5563)
-                        else -> Color(0xFFD1D5DB)
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(segmentColor)
-                            .clickable(enabled = enabled) { onProgressSelected(progress) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            AncMiniIcon(tint = Color.White)
-                        } else {
-                            Text(
-                                text = progress.toString(),
-                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFF6B7280),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                    if (i == currentProgress) {
+                        when {
+                            i <= 4 -> TransparencyMiniIcon(tint = Color.White)
+                            i == 5 -> StandardMiniIcon(tint = Color.White)
+                            else -> AncMiniIcon(tint = Color.White)
                         }
-                    }
-
-                    if (progress < 10) {
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(24.dp)
-                                .background(Color(0xFFD1D5DB))
+                    } else {
+                        Text(
+                            text = i.toString(),
+                            color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFF6B7280),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
+                }
+                if (i < 10) {
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color(0xFFD1D5DB))
+                    )
                 }
             }
         }
+
+        // Draggable slider overlay
+        Slider(
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = {
+                val snapped = sliderValue.toInt().coerceIn(0, 10)
+                onProgressSelected(snapped)
+            },
+            valueRange = 0f..10f,
+            steps = 9,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 0.dp)
+                .height(50.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.Transparent,
+                inactiveTrackColor = Color.Transparent,
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent,
+            ),
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .shadow(4.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1F2024)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        currentProgress <= 4 -> TransparencyMiniIcon(tint = Color.White, modifier = Modifier.size(14.dp))
+                        currentProgress == 5 -> StandardMiniIcon(tint = Color.White, modifier = Modifier.size(14.dp))
+                        else -> AncMiniIcon(tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -254,8 +215,8 @@ fun NoiseModeButton(
 // ==================== MINI ICONS FOR SEGMENTED BAR ====================
 
 @Composable
-fun TransparencyMiniIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(16.dp)) {
+fun TransparencyMiniIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.then(Modifier.size(16.dp))) {
         drawCircle(color = tint, radius = size.width * 0.18f, center = Offset(size.width / 2f, size.height * 0.36f))
         drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = true,
             topLeft = Offset(size.width * 0.18f, size.height * 0.56f),
@@ -266,8 +227,8 @@ fun TransparencyMiniIcon(tint: Color) {
 }
 
 @Composable
-fun StandardMiniIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(16.dp)) {
+fun StandardMiniIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.then(Modifier.size(16.dp))) {
         drawCircle(color = tint, radius = size.width * 0.17f, center = Offset(size.width / 2f, size.height * 0.38f))
         drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = true,
             topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
@@ -282,8 +243,8 @@ fun StandardMiniIcon(tint: Color) {
 }
 
 @Composable
-fun AncMiniIcon(tint: Color) {
-    Canvas(modifier = Modifier.size(16.dp)) {
+fun AncMiniIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.then(Modifier.size(16.dp))) {
         drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = false,
             topLeft = Offset(size.width * 0.18f, size.height * 0.08f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.60f),
