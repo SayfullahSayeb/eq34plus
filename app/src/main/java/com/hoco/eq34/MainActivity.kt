@@ -6,10 +6,13 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
@@ -33,11 +36,12 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    window.statusBarColor = Color.parseColor("#1F2024")
-    window.navigationBarColor = Color.WHITE
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      window.decorView.systemUiVisibility = 0
-    }
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+    )
+    WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
+    WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
     requestBluetoothPermissions()
     setContent {
       MyApplicationTheme {
