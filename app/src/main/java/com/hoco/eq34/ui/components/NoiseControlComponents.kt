@@ -65,11 +65,7 @@ fun SegmentedNoiseLevelSelector(
                 },
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = when {
-                    currentProgress <= 4 -> Color(0xFF3B82F6)
-                    currentProgress == 5 -> TextSecondary
-                    else -> Color(0xFF10B981)
-                }
+                color = TextPrimary
             )
             Text(
                 text = "$currentProgress/10",
@@ -86,7 +82,7 @@ fun SegmentedNoiseLevelSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF1F2024))
+                .background(Color(0xFFE5E7EB))
                 .padding(vertical = 4.dp, horizontal = 2.dp)
         ) {
             Row(
@@ -97,15 +93,10 @@ fun SegmentedNoiseLevelSelector(
                 for (progress in 0..4) {
                     val isActive = (progress <= currentProgress)
                     val isSelected = (progress == currentProgress)
-                    val activeColor = when {
-                        currentProgress <= 4 -> Color(0xFF3B82F6)
-                        currentProgress == 5 -> Color(0xFF6B7280)
-                        else -> Color(0xFF10B981)
-                    }
                     val segmentColor = when {
-                        isSelected -> activeColor
-                        isActive -> activeColor.copy(alpha = 0.5f)
-                        else -> Color(0xFF3F4048)
+                        isSelected -> Color(0xFF1F2024)
+                        isActive -> Color(0xFF3F4048)
+                        else -> Color(0xFFF3F4F6)
                     }
 
                     Box(
@@ -126,7 +117,7 @@ fun SegmentedNoiseLevelSelector(
                         } else {
                             Text(
                                 text = progress.toString(),
-                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF),
+                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFF9CA3AF),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -139,7 +130,7 @@ fun SegmentedNoiseLevelSelector(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(24.dp)
-                                .background(Color(0xFF2A2B2F))
+                                .background(Color(0xFFD1D5DB))
                         )
                     }
                 }
@@ -152,9 +143,9 @@ fun SegmentedNoiseLevelSelector(
                         .clip(RoundedCornerShape(4.dp))
                         .background(
                             when {
-                                currentProgress == 5 -> Color(0xFF6B7280)
-                                currentProgress > 5 -> Color(0xFF6B7280).copy(alpha = 0.5f)
-                                else -> Color(0xFF3F4048)
+                                currentProgress == 5 -> Color(0xFF1F2024)
+                                currentProgress > 5 -> Color(0xFF3F4048)
+                                else -> Color(0xFFF3F4F6)
                             }
                         )
                         .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) },
@@ -163,7 +154,7 @@ fun SegmentedNoiseLevelSelector(
                     if (currentProgress == 5) {
                         StandardMiniIcon(tint = Color.White)
                     } else {
-                        StandardMiniIcon(tint = if (currentProgress > 5) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF))
+                        StandardMiniIcon(tint = if (currentProgress > 5) Color.White.copy(alpha = 0.7f) else Color(0xFF9CA3AF))
                     }
                 }
 
@@ -172,18 +163,17 @@ fun SegmentedNoiseLevelSelector(
                     modifier = Modifier
                         .width(1.dp)
                         .height(24.dp)
-                        .background(Color(0xFF2A2B2F))
+                        .background(Color(0xFFD1D5DB))
                 )
 
                 // Progress 6-10 (ANC range)
                 for (progress in 6..10) {
                     val isActive = (progress <= currentProgress)
                     val isSelected = (progress == currentProgress)
-                    val activeColor = Color(0xFF10B981)
                     val segmentColor = when {
-                        isSelected -> activeColor
-                        isActive -> activeColor.copy(alpha = 0.5f)
-                        else -> Color(0xFF3F4048)
+                        isSelected -> Color(0xFF1F2024)
+                        isActive -> Color(0xFF3F4048)
+                        else -> Color(0xFFF3F4F6)
                     }
 
                     Box(
@@ -200,7 +190,7 @@ fun SegmentedNoiseLevelSelector(
                         } else {
                             Text(
                                 text = progress.toString(),
-                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFFC4C7CF),
+                                color = if (isActive) Color.White.copy(alpha = 0.7f) else Color(0xFF9CA3AF),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -212,7 +202,7 @@ fun SegmentedNoiseLevelSelector(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(24.dp)
-                                .background(Color(0xFF2A2B2F))
+                                .background(Color(0xFFD1D5DB))
                         )
                     }
                 }

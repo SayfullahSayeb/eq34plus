@@ -425,42 +425,43 @@ fun ConnectedScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameName by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Device name on left, edit icon on right
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = connectedDeviceName,
-                style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-            )
-            IconButton(
-                onClick = {
-                    renameName = connectedDeviceName
-                    showRenameDialog = true
-                },
-                modifier = Modifier.size(32.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Device name on left, edit icon on right
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Edit Name",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp)
+                Text(
+                    text = connectedDeviceName,
+                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
                 )
+                IconButton(
+                    onClick = {
+                        renameName = connectedDeviceName
+                        showRenameDialog = true
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit Name",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
-        }
 
         val statusText = when (connectionState) {
             ConnectionStatus.CONNECTING -> "Connecting..."
@@ -592,9 +593,16 @@ fun ConnectedScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Bottom: Disconnect
-        TextButton(onClick = onDisconnect) {
-            Text("Disconnect", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+        // Bottom: Disconnect button
+        Button(
+            onClick = onDisconnect,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E7EB))
+        ) {
+            Text("Disconnect", color = TextPrimary, fontWeight = FontWeight.Medium)
         }
 
         // Version at bottom
@@ -610,8 +618,7 @@ fun ConnectedScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .clickable(enabled = false) { },
+                .background(Color.Black.copy(alpha = 0.4f)),
             contentAlignment = Alignment.Center
         ) {
             Card(
@@ -625,12 +632,7 @@ fun ConnectedScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Rename Device",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+                    Text("Rename Device", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = renameName,
@@ -641,32 +643,21 @@ fun ConnectedScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showRenameDialog = false },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = { showRenameDialog = false }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                             Text("Cancel")
                         }
                         Button(
-                            onClick = {
-                                onRename(renameName)
-                                showRenameDialog = false
-                            },
+                            onClick = { onRename(renameName); showRenameDialog = false },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             enabled = renameName.isNotBlank() && renameName.length <= 32,
                             colors = ButtonDefaults.buttonColors(containerColor = TextPrimary)
-                        ) {
-                            Text("Rename", color = Color.White)
-                        }
+                        ) { Text("Rename", color = Color.White) }
                     }
                 }
             }
         }
+    }
     }
 }
