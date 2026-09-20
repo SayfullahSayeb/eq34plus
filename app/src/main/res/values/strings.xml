@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">HOCO EQ34 Plus</string>
+    <string name="app_title">HOCO EQ34 Plus</string>
+    <string name="app_subtitle">Dedicated TWS Earbud Controller</string>
+    <string name="device_status_disconnected">Disconnected</string>
+    <string name="device_status_connecting">Connecting…</string>
+    <string name="device_status_connected">Connected</string>
+    <string name="btn_scan">Scan Devices</string>
+    <string name="btn_stop_scan">Stop Scanning</string>
+    <string name="btn_connect">Connect</string>
+    <string name="btn_disconnect">Disconnect</string>
+    <string name="section_battery">Battery Status</string>
+    <string name="left_earbud">Left</string>
+    <string name="right_earbud">Right</string>
+    <string name="charging_case">Case</string>
+    <string name="section_noise_control">Noise Control (ANC)</string>
+    <string name="mode_anc">Noise Cancellation</string>
+    <string name="mode_off">Normal / Off</string>
+    <string name="mode_transparency">Transparency</string>
+    <string name="anc_gain_level">ANC Level</string>
+    <string name="nearby_devices">Nearby Devices</string>
+    <string name="paired_devices">Paired Devices</string>
+    <string name="no_devices_found">No HOCO or JieLi devices found yet. Tap Scan to search.</string>
+    <string name="permission_required">Bluetooth &amp; Location permissions are required to scan and connect to your HOCO EQ34 Plus.</string>
+    <string name="grant_permission">Grant Permissions</string>
+</resources>

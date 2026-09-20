@@ -1,0 +1,6 @@
+{
+  "name": "HOCO EQ34 Plus",
+  "description": "Dedicated Bluetooth & BLE controller for HOCO EQ34 Plus TWS earbuds with ANC noise control and battery monitoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
