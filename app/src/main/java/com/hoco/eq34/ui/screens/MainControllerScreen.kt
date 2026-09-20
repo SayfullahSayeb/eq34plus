@@ -71,6 +71,7 @@ import com.hoco.eq34.ui.theme.TextSecondary
 @Composable
 fun MainControllerScreen(
     viewModel: HocoViewModel,
+    onRequestPermission: ((() -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
@@ -108,11 +109,18 @@ fun MainControllerScreen(
                     currentVersion = currentVersion,
                     hasUpdate = hasUpdate,
                     onScanClick = {
-                        if (isScanning) {
-                            viewModel.stopScan()
+                        val doScan = {
+                            if (isScanning) {
+                                viewModel.stopScan()
+                            } else {
+                                viewModel.refreshBondedDevices()
+                                viewModel.startScan()
+                            }
+                        }
+                        if (onRequestPermission != null) {
+                            onRequestPermission(doScan)
                         } else {
-                            viewModel.refreshBondedDevices()
-                            viewModel.startScan()
+                            doScan()
                         }
                     },
                     onConnectDevice = { device ->

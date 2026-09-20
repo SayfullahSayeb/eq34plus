@@ -24,14 +24,15 @@ class MainActivity : ComponentActivity() {
 
   private val viewModel: HocoViewModel by viewModels()
 
+  private var pendingAction: (() -> Unit)? = null
+
   private val permissionLauncher = registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions()
   ) { results ->
     val allGranted = results.values.all { it }
     viewModel.updatePermissionsGranted(allGranted)
-    if (allGranted) {
-      viewModel.refreshBondedDevices()
-    }
+    pendingAction?.invoke()
+    pendingAction = null
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,12 +43,13 @@ class MainActivity : ComponentActivity() {
     )
     WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
     WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars = true
-    requestBluetoothPermissions()
+    viewModel.updatePermissionsGranted(hasBluetoothPermissions())
     setContent {
       MyApplicationTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           MainControllerScreen(
             viewModel = viewModel,
+            onRequestPermission = { action -> requestBluetoothPermissionsIfNeeded(action) },
             modifier = Modifier.fillMaxSize()
           )
         }
@@ -55,26 +57,28 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  private fun requestBluetoothPermissions() {
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      arrayOf(
-        Manifest.permission.BLUETOOTH_CONNECT,
-      )
+  fun requestBluetoothPermissionsIfNeeded(action: () -> Unit) {
+    if (hasBluetoothPermissions()) {
+      action()
     } else {
-      arrayOf(
-        Manifest.permission.BLUETOOTH,
-        Manifest.permission.BLUETOOTH_ADMIN,
-      )
-    }
-
-    val allGranted = permissions.all {
-      ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    if (allGranted) {
-      viewModel.updatePermissionsGranted(true)
-    } else {
+      pendingAction = action
+      val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_CONNECT)
+      } else {
+        arrayOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN)
+      }
       permissionLauncher.launch(permissions)
+    }
+  }
+
+  private fun hasBluetoothPermissions(): Boolean {
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      arrayOf(Manifest.permission.BLUETOOTH_CONNECT)
+    } else {
+      arrayOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN)
+    }
+    return permissions.all {
+      ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
   }
 }
