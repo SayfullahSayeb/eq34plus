@@ -23,7 +23,7 @@ Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, rep
 | EQ Settings | ✅ | ❌ |
 | Touch Key Customization | ✅ | ❌ |
 | Firmware OTA Update | ✅ | ❌ (blocked for safety) |
-| 50+ HOCO Models | ✅ | ❌ (EQ34 Plus only) |
+| 50+ hoco Models | ✅ | ❌ (EQ34 Plus only) |
 
 
 ## Download
@@ -33,7 +33,7 @@ Go to [Releases](../../releases) and download the APK. Enable "Install from unkn
 
 ## Credits
 
-Built using [JieLi RCSP SDK](https://www.jielibluetooth.com/) and reverse-engineered from the official hocow Music APK.
+Built using [JieLi RCSP SDK](https://www.jielibluetooth.com/) and reverse-engineered from the official hoco Music APK.
 
 ## License
 

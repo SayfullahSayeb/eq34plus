@@ -464,17 +464,22 @@ class HocoBleController private constructor(private val appContext: Context) {
         }
 
         addLog("Renaming device to: $newName")
-        _lastCommandResult.value = CommandResult.Idle
+
+        val oldName = _connectedDevice.value?.name
+        _connectedDevice.value = _connectedDevice.value?.copy(name = newName)
+        _lastCommandResult.value = CommandResult.Success("Renamed to $newName")
 
         ctrl.configDeviceName(device, newName, object : OnRcspActionCallback<Int> {
             override fun onSuccess(dev: BluetoothDevice?, message: Int?) {
                 addLog("Rename successful: $newName")
-                _connectedDevice.value = _connectedDevice.value?.copy(name = newName)
-                _lastCommandResult.value = CommandResult.Success("Renamed to $newName")
+                ctrl.rebootDevice(device, null)
             }
 
             override fun onError(dev: BluetoothDevice?, error: BaseError?) {
                 addLog("Rename failed: ${error?.message}")
+                if (oldName != null) {
+                    _connectedDevice.value = _connectedDevice.value?.copy(name = oldName)
+                }
                 _lastCommandResult.value = CommandResult.Failed(
                     "Failed to rename to $newName",
                     error?.message
