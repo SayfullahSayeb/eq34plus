@@ -68,6 +68,7 @@ import com.example.ui.theme.TextSecondary
 fun ScreenshotAccurateNoiseCard(
     ancSettings: AncSettings,
     isConnected: Boolean,
+    isPendingVerification: Boolean = false,
     onModeSelect: (NoiseMode) -> Unit,
     onLevelChange: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -100,14 +101,17 @@ fun ScreenshotAccurateNoiseCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFFF3F4F6))
+                            .background(
+                                if (isPendingVerification) Color(0xFFFFF3CD) else Color(0xFFF3F4F6)
+                            )
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "Level ${ancSettings.gainLevel}/10",
+                            text = if (isPendingVerification) "Verifying..."
+                            else "Level ${ancSettings.gainLevel}/10",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF4B5563)
+                            color = if (isPendingVerification) Color(0xFF856404) else Color(0xFF4B5563)
                         )
                     }
                 }
@@ -200,7 +204,9 @@ fun CompactConnectionStatusBar(
                         .clip(CircleShape)
                         .background(
                             when (connectionState) {
-                                ConnectionStatus.CONNECTED -> GreenBattery
+                                ConnectionStatus.READY -> GreenBattery
+                                ConnectionStatus.CONNECTED -> OrangeBattery
+                                ConnectionStatus.IDENTIFYING -> OrangeBattery
                                 ConnectionStatus.CONNECTING -> OrangeBattery
                                 ConnectionStatus.DISCONNECTED -> Color(0xFF9CA3AF)
                             }
@@ -212,7 +218,9 @@ fun CompactConnectionStatusBar(
                 Column {
                     Text(
                         text = when (connectionState) {
+                            ConnectionStatus.READY -> connectedDevice?.name ?: "EQ34 Plus"
                             ConnectionStatus.CONNECTED -> connectedDevice?.name ?: "Connected"
+                            ConnectionStatus.IDENTIFYING -> connectedDevice?.name ?: "Identifying..."
                             ConnectionStatus.CONNECTING -> "Connecting..."
                             ConnectionStatus.DISCONNECTED -> "Device Disconnected"
                         },
@@ -222,7 +230,9 @@ fun CompactConnectionStatusBar(
                     )
                     Text(
                         text = when (connectionState) {
-                            ConnectionStatus.CONNECTED -> "JieLi RCSP Protocol Ready"
+                            ConnectionStatus.READY -> "Verified & Ready"
+                            ConnectionStatus.CONNECTED -> "Identifying device..."
+                            ConnectionStatus.IDENTIFYING -> "Reading device info..."
                             ConnectionStatus.CONNECTING -> "Handshaking..."
                             ConnectionStatus.DISCONNECTED -> "Tap 'Scan' to discover earbuds"
                         },
@@ -233,7 +243,7 @@ fun CompactConnectionStatusBar(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (connectionState == ConnectionStatus.CONNECTED) {
+                if (connectionState == ConnectionStatus.CONNECTED || connectionState == ConnectionStatus.READY || connectionState == ConnectionStatus.IDENTIFYING) {
                     TextButton(
                         onClick = onDisconnectClick,
                         modifier = Modifier.testTag("compact_disconnect_btn")

@@ -51,3 +51,36 @@
 # R8 auto-generated rules
 -dontwarn com.jieli.bt.decryption.**
 -dontwarn com.jieli.bluetooth.utils.CryptoUtil
+
+# SAFETY: Exclude firmware/OTA/flash classes from the SDK
+# These classes are dangerous and must never be used
+-dontwarn com.jieli.bluetooth.bean.command.ota.**
+-dontwarn com.jieli.bluetooth.bean.parameter.flash.**
+-dontwarn com.jieli.bluetooth.bean.parameter.FirmwareUpdate**
+-dontwarn com.jieli.bluetooth.bean.parameter.InquireUpdate**
+-dontwarn com.jieli.bluetooth.bean.parameter.NotifyUpdate**
+-dontwarn com.jieli.bluetooth.bean.parameter.RebootDevice**
+-dontwarn com.jieli.bluetooth.bean.response.EnterUpdateMode**
+-dontwarn com.jieli.bluetooth.bean.response.ExitUpdateMode**
+-dontwarn com.jieli.bluetooth.bean.response.FirmwareUpdate**
+-dontwarn com.jieli.bluetooth.bean.response.InquireUpdate**
+-dontwarn com.jieli.bluetooth.bean.response.RebootDevice**
+-dontwarn com.jieli.bluetooth.bean.response.UpdateFileOffset**
+-dontwarn com.jieli.bluetooth.bean.device.OTA**
+-dontwarn com.jieli.bluetooth.impl.rcsp.file.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.task.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.data_transfer.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.translation.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.record.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.auracast.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.charging_case.**
+-dontwarn com.jieli.bluetooth.impl.rcsp.FMControlImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.AuxControlImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.LightControlImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.PCSlaveImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.SoundCardImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.SPDIFImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.RTCImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.MusicControlImpl
+-dontwarn com.jieli.bluetooth.impl.rcsp.VolumeControlImpl
+-dontwarn com.jieli.filebrowse.**

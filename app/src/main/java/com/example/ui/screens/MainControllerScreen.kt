@@ -92,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.ConnectionStatus
+import com.example.data.HocoBleController
 import com.example.data.model.AncSettings
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.HocoDevice
@@ -138,11 +139,16 @@ fun MainControllerScreen(
     val isScanning by viewModel.isScanning.collectAsState()
     val logMessages by viewModel.logMessages.collectAsState()
     val hasPermissions by viewModel.hasPermissions.collectAsState()
+    val deviceIdentification by viewModel.deviceIdentification.collectAsState()
+    val lastCommandResult by viewModel.lastCommandResult.collectAsState()
 
     var showLogs by remember { mutableStateOf(false) }
     var selectedSubTab by remember { mutableStateOf(0) }
     var selectedBottomNav by remember { mutableStateOf(0) }
     var showDeviceSheet by remember { mutableStateOf(false) }
+
+    // Controls are only enabled when device is identified and ready
+    val controlsEnabled = connectionState == ConnectionStatus.READY
 
     // Permissions launcher
     val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -234,14 +240,55 @@ fun MainControllerScreen(
                 item {
                     ScreenshotAccurateNoiseCard(
                         ancSettings = ancSettings,
-                        isConnected = connectionState == ConnectionStatus.CONNECTED,
+                        isConnected = controlsEnabled,
+                        isPendingVerification = ancSettings.isPendingVerification,
                         onModeSelect = { mode -> viewModel.setNoiseMode(mode) },
                         onLevelChange = { level -> viewModel.setAncLevel(level) }
                     )
                 }
 
+                // Device verification status banner
+                if (connectionState == ConnectionStatus.IDENTIFYING) {
+                    item {
+                        VerificationBanner(
+                            message = "Identifying device...",
+                            isWarning = false
+                        )
+                    }
+                }
+
+                if (connectionState == ConnectionStatus.CONNECTED && !controlsEnabled) {
+                    item {
+                        VerificationBanner(
+                            message = "Device not verified. Controls disabled for safety.",
+                            isWarning = true
+                        )
+                    }
+                }
+
+                // Command result feedback
+                when (val result = lastCommandResult) {
+                    is HocoBleController.CommandResult.Failed -> {
+                        item {
+                            VerificationBanner(
+                                message = "Command failed: ${result.message}",
+                                isWarning = true
+                            )
+                        }
+                    }
+                    is HocoBleController.CommandResult.DeviceNotVerified -> {
+                        item {
+                            VerificationBanner(
+                                message = result.message,
+                                isWarning = true
+                            )
+                        }
+                    }
+                    else -> {}
+                }
+
                 // Expandable device manager / scan list
-                if (showDeviceSheet || connectionState != ConnectionStatus.CONNECTED) {
+                if (showDeviceSheet || connectionState != ConnectionStatus.READY) {
                     item {
                         DeviceListSection(
                             isScanning = isScanning,
@@ -268,6 +315,49 @@ fun MainControllerScreen(
             HocoBottomNavBar(
                 selectedTab = selectedBottomNav,
                 onTabSelected = { selectedBottomNav = it }
+            )
+        }
+    }
+}
+
+@Composable
+fun VerificationBanner(
+    message: String,
+    isWarning: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isWarning) Color(0xFFFFF3CD) else Color(0xFFD1ECF1)
+        ),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(
+                if (isWarning) Color(0xFFFFE69C) else Color(0xFFBEE5EB)
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isWarning) Icons.Default.Info else Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = if (isWarning) Color(0xFF856404) else Color(0xFF0C5460),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = if (isWarning) Color(0xFF856404) else Color(0xFF0C5460),
+                    fontWeight = FontWeight.Medium
+                ),
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -343,7 +433,9 @@ fun TopControllerBar(
 @Composable
 fun StatusBadgePill(connectionState: ConnectionStatus) {
     val (color, text) = when (connectionState) {
-        ConnectionStatus.CONNECTED -> GreenBattery to "Connected"
+        ConnectionStatus.READY -> GreenBattery to "Ready"
+        ConnectionStatus.CONNECTED -> OrangeBattery to "Identifying"
+        ConnectionStatus.IDENTIFYING -> OrangeBattery to "Identifying"
         ConnectionStatus.CONNECTING -> OrangeBattery to "Connecting"
         ConnectionStatus.DISCONNECTED -> Color(0xFF6E7681) to "Disconnected"
     }

@@ -9,6 +9,7 @@ import com.example.data.model.AncSettings
 import com.example.data.model.BatteryInfoModel
 import com.example.data.model.HocoDevice
 import com.example.data.model.NoiseMode
+import com.example.data.safety.DeviceIdentifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,8 @@ class HocoViewModel(application: Application) : AndroidViewModel(application) {
     val pairedDevices: StateFlow<List<HocoDevice>> = controller.pairedDevices
     val isScanning: StateFlow<Boolean> = controller.isScanning
     val logMessages: StateFlow<List<String>> = controller.logMessages
+    val deviceIdentification: StateFlow<DeviceIdentifier.IdentificationResult> = controller.deviceIdentification
+    val lastCommandResult: StateFlow<HocoBleController.CommandResult> = controller.lastCommandResult
 
     private val _hasPermissions = MutableStateFlow(false)
     val hasPermissions: StateFlow<Boolean> = _hasPermissions.asStateFlow()
