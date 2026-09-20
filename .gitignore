@@ -19,4 +19,3 @@ debug.keystore
 tools/
 hoco_apk_analysis/
 *.apk
-*.apks
