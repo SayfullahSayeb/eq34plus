@@ -82,8 +82,8 @@ fun SegmentedNoiseLevelSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFE5E7EB))
-                .padding(vertical = 4.dp, horizontal = 2.dp)
+                .background(Color(0xFF1F2024))
+                .padding(vertical = 6.dp, horizontal = 2.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -102,7 +102,7 @@ fun SegmentedNoiseLevelSelector(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(50.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(segmentColor)
                             .clickable(enabled = enabled) { onProgressSelected(progress) },
@@ -139,7 +139,7 @@ fun SegmentedNoiseLevelSelector(
                 Box(
                     modifier = Modifier
                         .weight(1.4f)
-                        .height(40.dp)
+                        .height(50.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(
                             when {
@@ -179,7 +179,7 @@ fun SegmentedNoiseLevelSelector(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(50.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(segmentColor)
                             .clickable(enabled = enabled) { onProgressSelected(progress) },
