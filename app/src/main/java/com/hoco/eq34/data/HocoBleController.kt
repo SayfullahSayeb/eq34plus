@@ -656,14 +656,6 @@ class HocoBleController private constructor(private val appContext: Context) {
     }
 
     private suspend fun startScanInternal() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val scanGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
-            val connectGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-            if (!scanGranted || !connectGranted) {
-                addLog("BLUETOOTH_SCAN/CONNECT permission not granted. Please grant permissions.")
-                return
-            }
-        }
         val ctrl = rcspController
         if (ctrl == null) {
             addLog("BLE Controller not ready - RCSP not initialized")
