@@ -355,6 +355,9 @@ fun NotConnectedScreen(
         )
     }
 }
+
+@Composable
+fun DeviceItem(
     name: String,
     isBonded: Boolean,
     onClick: () -> Unit
