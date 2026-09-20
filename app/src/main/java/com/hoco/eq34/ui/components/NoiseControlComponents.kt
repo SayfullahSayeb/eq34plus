@@ -16,14 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hoco.eq34.data.model.NoiseControlPositions
 import com.hoco.eq34.data.model.NoiseControlState
 import com.hoco.eq34.data.model.NoiseMode
 import com.hoco.eq34.ui.theme.SelectedDarkIcon
@@ -42,6 +37,11 @@ import com.hoco.eq34.ui.theme.TextPrimary
 import com.hoco.eq34.ui.theme.TextSecondary
 import com.hoco.eq34.ui.theme.UnselectedLightIcon
 
+/**
+ * Segmented noise level bar matching the original HOCO app.
+ * 11 segments: 0-4 (Transparency), 5 (Standard), 6-10 (ANC)
+ * Selected segment shows icon, unselected shows number.
+ */
 @Composable
 fun SegmentedNoiseLevelSelector(
     noiseState: NoiseControlState,
@@ -49,29 +49,30 @@ fun SegmentedNoiseLevelSelector(
     onProgressSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var sliderValue by remember { mutableFloatStateOf(noiseState.uiProgress.toFloat()) }
+    val currentProgress = noiseState.uiProgress
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // Current mode label + level
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = when {
-                    noiseState.uiProgress <= 4 -> "Transparency"
-                    noiseState.uiProgress == 5 -> "Standard"
+                    currentProgress <= 4 -> "Transparency"
+                    currentProgress == 5 -> "Standard"
                     else -> "ANC"
                 },
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = when {
-                    noiseState.uiProgress <= 4 -> Color(0xFF3B82F6)
-                    noiseState.uiProgress == 5 -> TextSecondary
+                    currentProgress <= 4 -> Color(0xFF3B82F6)
+                    currentProgress == 5 -> TextSecondary
                     else -> Color(0xFF10B981)
                 }
             )
             Text(
-                text = "${noiseState.uiProgress}/10",
+                text = "$currentProgress/10",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -80,36 +81,129 @@ fun SegmentedNoiseLevelSelector(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Slider(
-            value = sliderValue,
-            onValueChange = { sliderValue = it },
-            onValueChangeFinished = { onProgressSelected(sliderValue.toInt()) },
-            valueRange = 0f..10f,
-            steps = 9,
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = when {
-                    sliderValue <= 4 -> Color(0xFF3B82F6)
-                    sliderValue == 5f -> TextSecondary
-                    else -> Color(0xFF10B981)
-                },
-                activeTrackColor = when {
-                    sliderValue <= 4 -> Color(0xFF3B82F6)
-                    sliderValue == 5f -> Color(0xFF6B7280)
-                    else -> Color(0xFF10B981)
-                },
-                inactiveTrackColor = Color(0xFFE5E7EB)
-            )
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+        // Segmented bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF1F2024))
+                .padding(vertical = 4.dp, horizontal = 2.dp)
         ) {
-            Text("Transparency", fontSize = 10.sp, color = Color(0xFF3B82F6))
-            Text("Standard", fontSize = 10.sp, color = TextSecondary)
-            Text("ANC", fontSize = 10.sp, color = Color(0xFF10B981))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Progress 0-4 (Transparency range)
+                for (progress in 0..4) {
+                    val isSelected = (progress == currentProgress)
+                    val modeColor = if (isSelected) Color(0xFF3B82F6) else Color(0xFFC4C7CF)
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clickable(enabled = enabled) { onProgressSelected(progress) }
+                            .then(
+                                if (isSelected) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFF2A2B2F))
+                                } else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            TransparencyMiniIcon(tint = modeColor)
+                        } else {
+                            Text(
+                                text = progress.toString(),
+                                color = Color(0xFFC4C7CF),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    // Vertical separator
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color(0xFF3F4048))
+                    )
+                }
+
+                // Center: Progress 5 (Standard mode)
+                Box(
+                    modifier = Modifier
+                        .weight(1.4f)
+                        .height(40.dp)
+                        .clickable(enabled = enabled) { onProgressSelected(NoiseControlPositions.STANDARD_PROGRESS) }
+                        .then(
+                            if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
+                                Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFF2A2B2F))
+                            } else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (currentProgress == NoiseControlPositions.STANDARD_PROGRESS) {
+                        StandardMiniIcon(tint = Color.White)
+                    } else {
+                        StandardMiniIcon(tint = Color(0xFFC4C7CF))
+                    }
+                }
+
+                // Vertical separator
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(24.dp)
+                        .background(Color(0xFF3F4048))
+                )
+
+                // Progress 6-10 (ANC range)
+                for (progress in 6..10) {
+                    val isSelected = (progress == currentProgress)
+                    val modeColor = if (isSelected) Color(0xFF10B981) else Color(0xFFC4C7CF)
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clickable(enabled = enabled) { onProgressSelected(progress) }
+                            .then(
+                                if (isSelected) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFF2A2B2F))
+                                } else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            AncMiniIcon(tint = modeColor)
+                        } else {
+                            Text(
+                                text = progress.toString(),
+                                color = Color(0xFFC4C7CF),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    if (progress < 10) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(24.dp)
+                                .background(Color(0xFF3F4048))
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -161,6 +255,58 @@ fun NoiseModeButton(
         )
     }
 }
+
+// ==================== MINI ICONS FOR SEGMENTED BAR ====================
+
+@Composable
+fun TransparencyMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawCircle(color = tint, radius = size.width * 0.18f, center = Offset(size.width / 2f, size.height * 0.36f))
+        drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+            topLeft = Offset(size.width * 0.18f, size.height * 0.56f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.40f))
+        drawCircle(color = tint, radius = size.width * 0.10f, center = Offset(size.width * 0.20f, size.height * 0.36f))
+        drawCircle(color = tint, radius = size.width * 0.10f, center = Offset(size.width * 0.80f, size.height * 0.36f))
+    }
+}
+
+@Composable
+fun StandardMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawCircle(color = tint, radius = size.width * 0.17f, center = Offset(size.width / 2f, size.height * 0.38f))
+        drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+            topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f))
+        drawRoundRect(color = tint, topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+        drawRoundRect(color = tint, topLeft = Offset(size.width * 0.74f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+    }
+}
+
+@Composable
+fun AncMiniIcon(tint: Color) {
+    Canvas(modifier = Modifier.size(16.dp)) {
+        drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = false,
+            topLeft = Offset(size.width * 0.18f, size.height * 0.08f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.64f, size.height * 0.60f),
+            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+        drawCircle(color = tint, radius = size.width * 0.16f, center = Offset(size.width / 2f, size.height * 0.38f))
+        drawArc(color = tint, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+            topLeft = Offset(size.width * 0.20f, size.height * 0.58f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.60f, size.height * 0.36f))
+        drawRoundRect(color = tint, topLeft = Offset(size.width * 0.14f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+        drawRoundRect(color = tint, topLeft = Offset(size.width * 0.74f, size.height * 0.26f),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.12f, size.height * 0.26f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+    }
+}
+
+// ==================== FULL SIZE ICONS FOR MODE BUTTONS ====================
 
 @Composable
 fun TransparencyCustomIcon(tint: Color) {

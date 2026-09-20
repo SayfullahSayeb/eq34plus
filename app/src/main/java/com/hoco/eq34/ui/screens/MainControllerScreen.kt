@@ -145,7 +145,7 @@ fun MainControllerScreen(
             } else {
                 ConnectedScreen(
                     connectionState = connectionState,
-                    connectedDeviceName = connectedDevice?.name ?: "HOCO EQ34",
+                    connectedDeviceName = connectedDevice?.name ?: "HOCO EQ34 Plus",
                     batteryState = batteryState,
                     noiseState = noiseState,
                     controlsEnabled = controlsEnabled,
@@ -208,7 +208,7 @@ fun NotConnectedScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "HOCO EQ34",
+            text = "HOCO EQ34 Plus",
             style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -222,6 +222,21 @@ fun NotConnectedScreen(
             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
             color = TextSecondary
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Case image before scan button
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.eq34_case),
+                contentDescription = "EQ34 Plus Case",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(100.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -267,15 +282,8 @@ fun NotConnectedScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.eq34_case),
-                        contentDescription = null,
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(120.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Open your EQ34 Plus case\nto discover earbuds",
+                        text = "No devices found",
                         textAlign = TextAlign.Center,
                         color = TextSecondary,
                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
@@ -285,7 +293,7 @@ fun NotConnectedScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (pairedDevices.isNotEmpty()) {
                     item {
@@ -372,28 +380,29 @@ fun DeviceItem(
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             Icons.Default.Headset,
             contentDescription = null,
             tint = if (isHoco) TextPrimary else TextSecondary,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = name,
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = if (isHoco) FontWeight.Bold else FontWeight.Normal,
-                    color = TextPrimary
+                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = if (isHoco) FontWeight.Bold else FontWeight.Medium,
+                    color = TextPrimary,
+                    fontSize = 16.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             if (isBonded) {
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Paired",
                     style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
@@ -429,36 +438,51 @@ fun ConnectedScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Device name with edit icon on top
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = connectedDeviceName,
-                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+            Text(
+                text = connectedDeviceName,
+                style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
-                val statusText = when (connectionState) {
-                    ConnectionStatus.CONNECTING -> "Connecting..."
-                    ConnectionStatus.IDENTIFYING -> "Identifying..."
-                    ConnectionStatus.READY -> "Connected"
-                    else -> "Connected"
-                }
-                Text(
-                    text = statusText,
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = if (connectionState == ConnectionStatus.READY) GreenBattery else TextSecondary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = {
+                    renameName = connectedDeviceName
+                    showRenameDialog = true
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit Name",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        val statusText = when (connectionState) {
+            ConnectionStatus.CONNECTING -> "Connecting..."
+            ConnectionStatus.IDENTIFYING -> "Identifying..."
+            ConnectionStatus.READY -> "Connected"
+            else -> "Connected"
+        }
+        Text(
+            text = statusText,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            color = if (connectionState == ConnectionStatus.READY) GreenBattery else TextSecondary
+        )
 
-        // Earbuds images: Left bud | Case | Right bud
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Earbuds images: Left bud only | Right bud only (no case)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -469,27 +493,14 @@ fun ConnectedScreen(
                     painter = painterResource(id = R.drawable.eq34_left),
                     contentDescription = "Left Earbud",
                     tint = Color.Unspecified,
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(120.dp)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "L ${if (batteryState.leftBattery > 0) "${batteryState.leftBattery}%" else ""}",
-                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
                     color = TextPrimary
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    painter = painterResource(id = R.drawable.eq34_case),
-                    contentDescription = "Case",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Case ${if (batteryState.caseBattery > 0) "${batteryState.caseBattery}%" else ""}",
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -497,18 +508,41 @@ fun ConnectedScreen(
                     painter = painterResource(id = R.drawable.eq34_right),
                     contentDescription = "Right Earbud",
                     tint = Color.Unspecified,
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(120.dp)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "R ${if (batteryState.rightBattery > 0) "${batteryState.rightBattery}%" else ""}",
-                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
                     color = TextPrimary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Case battery row
+        if (batteryState.caseBattery > 0) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.eq34_case),
+                    contentDescription = "Case",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Case ${batteryState.caseBattery}%",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         // ANC Control Card
         com.hoco.eq34.ui.components.ScreenshotAccurateNoiseCard(
@@ -564,29 +598,9 @@ fun ConnectedScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Bottom: Edit name + Disconnect
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = {
-                renameName = connectedDeviceName
-                showRenameDialog = true
-            }) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Edit Name",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            TextButton(onClick = onDisconnect) {
-                Text("Disconnect", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-            }
+        // Bottom: Disconnect
+        TextButton(onClick = onDisconnect) {
+            Text("Disconnect", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
         }
     }
 
