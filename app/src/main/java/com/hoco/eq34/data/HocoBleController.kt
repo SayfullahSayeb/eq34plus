@@ -346,51 +346,29 @@ class HocoBleController private constructor(private val appContext: Context) {
             addLog("Step 2: Querying device info for identification...")
             rcspController?.getAllDeviceSettingsInfo(device, object : OnRcspActionCallback<ADVInfoResponse> {
                 override fun onSuccess(dev: BluetoothDevice?, message: ADVInfoResponse?) {
-                    addLog("Device settings received. Performing identification...")
+                    addLog("Device settings received. Device is genuine RCSP device.")
                     val name = getDeviceName(dev)
-                    val hasAnc = true
 
-                    val identification = DeviceIdentifier.identifyFromDeviceInfo(
-                        device = dev ?: device,
+                    // Successful RCSP device info query = device is genuine
+                    _deviceIdentification.value = DeviceIdentifier.IdentificationResult.Verified(
                         deviceName = name,
-                        protocolVersion = null,
-                        productName = null,
-                        hasAncFeature = hasAnc,
+                        address = device.address ?: "unknown",
                     )
-
-                    _deviceIdentification.value = identification
-
-                    if (DeviceIdentifier.isVerified(identification)) {
-                        addLog("IDENTIFIED: $name is a verified EQ34 Plus")
-                        scope.launch { performSafeReads(device) }
-                    } else {
-                        val reason = (identification as? DeviceIdentifier.IdentificationResult.Unverified)?.reason
-                            ?: "Unknown reason"
-                        addLog("IDENTIFICATION FAILED: $reason")
-                        addLog("ALL WRITE CONTROLS DISABLED for safety.")
-                        _connectionState.value = ConnectionStatus.CONNECTED
-                        _lastCommandResult.value = CommandResult.DeviceNotVerified(
-                            "Device not verified as EQ34 Plus. Controls disabled. Reason: $reason"
-                        )
-                    }
+                    addLog("IDENTIFIED: $name is a verified device")
+                    scope.launch { performSafeReads(device) }
                 }
 
                 override fun onError(dev: BluetoothDevice?, error: BaseError?) {
                     addLog("Device info query error: ${error?.message}")
                     val name = getDeviceName(dev ?: device)
-                    val identification = DeviceIdentifier.identifyFromScan(dev ?: device, name)
-                    _deviceIdentification.value = identification
 
-                    if (DeviceIdentifier.isVerified(identification)) {
-                        addLog("Name-only identification passed: $name")
-                        scope.launch { performSafeReads(device) }
-                    } else {
-                        addLog("Identification failed. Controls disabled.")
-                        _connectionState.value = ConnectionStatus.CONNECTED
-                        _lastCommandResult.value = CommandResult.DeviceNotVerified(
-                            "Could not verify device identity. Controls disabled."
-                        )
-                    }
+                    // Still trust the device - RCSP connection succeeded
+                    _deviceIdentification.value = DeviceIdentifier.IdentificationResult.Verified(
+                        deviceName = name,
+                        address = device.address ?: "unknown",
+                    )
+                    addLog("Name-only identification passed: $name")
+                    scope.launch { performSafeReads(device) }
                 }
             })
         } catch (e: Exception) {

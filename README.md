@@ -1,6 +1,6 @@
 # HOCO EQ34 Plus Controller
 
-Lightweight Android app to control HOCO EQ34 Plus TWS earbuds via Bluetooth, replacing the 147 MB official HOCO Music app.
+Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, replacing the 147 MB official hoco Music app.
 
 ## Features
 
@@ -33,7 +33,7 @@ Go to [Releases](../../releases) and download the APK. Enable "Install from unkn
 
 ## Credits
 
-Built using [JieLi RCSP SDK](https://www.jielibluetooth.com/) and reverse-engineered from the official HOCO Music APK.
+Built using [JieLi RCSP SDK](https://www.jielibluetooth.com/) and reverse-engineered from the official hocow Music APK.
 
 ## License
 
