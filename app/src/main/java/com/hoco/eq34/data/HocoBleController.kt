@@ -652,6 +652,10 @@ class HocoBleController private constructor(private val appContext: Context) {
 
     @SuppressLint("MissingPermission")
     fun startScan() {
+        scope.launch { startScanInternal() }
+    }
+
+    private suspend fun startScanInternal() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val scanGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
             val connectGranted = ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
@@ -670,11 +674,10 @@ class HocoBleController private constructor(private val appContext: Context) {
             addLog("Cannot scan while connecting/identifying")
             return
         }
-        try {
-            ctrl.stopScan()
-            _isScanning.value = false
-        } catch (_: Exception) {}
+        try { ctrl.stopScan() } catch (_: Throwable) {}
+        _isScanning.value = false
         _discoveredDevices.value = emptyList()
+        delay(300)
         addLog("Starting BLE Scan...")
         try {
             val success = ctrl.startBleScan(30000)
@@ -682,10 +685,7 @@ class HocoBleController private constructor(private val appContext: Context) {
             if (!success) {
                 addLog("Failed to start BLE Scan")
             }
-        } catch (e: SecurityException) {
-            addLog("Bluetooth permission denied: ${e.message}")
-            _isScanning.value = false
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             addLog("Scan error: ${e.message}")
             _isScanning.value = false
         }
