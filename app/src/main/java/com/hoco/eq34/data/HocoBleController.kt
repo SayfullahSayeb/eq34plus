@@ -107,35 +107,41 @@ class HocoBleController private constructor(private val appContext: Context) {
 
     private val rcspEventCallback = object : BTRcspEventCallback() {
         override fun onConnection(device: BluetoothDevice?, status: Int) {
-            val dev = device ?: run {
-                addLog("Connection event with null device, status=$status")
-                return
-            }
-            val devName = getDeviceName(dev)
-            val devAddr = dev.address ?: "Unknown"
-            addLog("Connection event: dev=$devName ($devAddr), status=$status")
+            try {
+                val dev = device ?: run {
+                    addLog("Connection event with null device, status=$status")
+                    return
+                }
+                val devName = getDeviceName(dev)
+                val devAddr = try { dev.address ?: "Unknown" } catch (_: Exception) { "Unknown" }
+                addLog("Connection event: dev=$devName ($devAddr), status=$status")
 
-            when (status) {
-                StateCode.CONNECTION_OK, StateCode.CONNECTION_CONNECTED -> {
-                    _connectionState.value = ConnectionStatus.CONNECTED
-                    _connectedDevice.value = HocoDevice(
-                        device = dev,
-                        name = devName,
-                        address = devAddr,
-                        isConnected = true,
-                        isBonded = isDeviceBonded(dev)
-                    )
-                    addLog("Connected to $devName. Starting identification...")
-                    scope.launch {
-                        performSafeIdentificationSequence(dev)
+                when (status) {
+                    StateCode.CONNECTION_OK, StateCode.CONNECTION_CONNECTED -> {
+                        _connectionState.value = ConnectionStatus.CONNECTED
+                        _connectedDevice.value = HocoDevice(
+                            device = dev,
+                            name = devName,
+                            address = devAddr,
+                            isConnected = true,
+                            isBonded = isDeviceBonded(dev)
+                        )
+                        addLog("Connected to $devName. Starting identification...")
+                        scope.launch {
+                            performSafeIdentificationSequence(dev)
+                        }
+                    }
+                    StateCode.CONNECTION_CONNECTING -> {
+                        _connectionState.value = ConnectionStatus.CONNECTING
+                    }
+                    StateCode.CONNECTION_DISCONNECT, StateCode.CONNECTION_FAILED -> {
+                        handleDisconnection()
                     }
                 }
-                StateCode.CONNECTION_CONNECTING -> {
-                    _connectionState.value = ConnectionStatus.CONNECTING
-                }
-                StateCode.CONNECTION_DISCONNECT, StateCode.CONNECTION_FAILED -> {
-                    handleDisconnection()
-                }
+            } catch (e: SecurityException) {
+                addLog("Connection permission error: ${e.message}")
+            } catch (e: Exception) {
+                addLog("Connection callback error: ${e.message}")
             }
         }
 
@@ -603,45 +609,62 @@ class HocoBleController private constructor(private val appContext: Context) {
 
     @SuppressLint("MissingPermission")
     fun refreshBondedDevices() {
-        val bluetoothManager = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = bluetoothManager?.adapter
-        if (adapter != null && adapter.isEnabled) {
-            val bonded = adapter.bondedDevices ?: emptySet()
-            val list = bonded.map { dev ->
-                HocoDevice(
-                    device = dev,
-                    name = dev.name ?: "Unknown Bluetooth Device",
-                    address = dev.address,
-                    isBonded = true
-                )
-            }.sortedByDescending { dev ->
-                var priority = 0
-                if (dev.name.contains("HOCO", ignoreCase = true)) priority += 100
-                if (dev.name.contains("EQ34", ignoreCase = true)) priority += 200
-                priority
+        try {
+            val bluetoothManager = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            val adapter = bluetoothManager?.adapter
+            if (adapter != null && adapter.isEnabled) {
+                val bonded = adapter.bondedDevices ?: emptySet()
+                val list = bonded.mapNotNull { dev ->
+                    try {
+                        HocoDevice(
+                            device = dev,
+                            name = dev.name ?: "Unknown Bluetooth Device",
+                            address = dev.address ?: return@mapNotNull null,
+                            isBonded = true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.sortedByDescending { dev ->
+                    var priority = 0
+                    if (dev.name.contains("HOCO", ignoreCase = true)) priority += 100
+                    if (dev.name.contains("EQ34", ignoreCase = true)) priority += 200
+                    priority
+                }
+                _pairedDevices.value = list
+                addLog("Found ${list.size} paired devices")
             }
-            _pairedDevices.value = list
-            addLog("Found ${list.size} paired devices")
+        } catch (e: SecurityException) {
+            addLog("Bonded devices permission error: ${e.message}")
+        } catch (e: Exception) {
+            addLog("Bonded devices error: ${e.message}")
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun checkInitialConnectedDevice() {
-        val ctrl = rcspController ?: return
-        val using = ctrl.usingDevice
-        if (using != null && ctrl.isDeviceConnected(using)) {
-            val name = getDeviceName(using)
-            _connectionState.value = ConnectionStatus.CONNECTED
-            _connectedDevice.value = HocoDevice(
-                device = using,
-                name = name,
-                address = using.address,
-                isConnected = true,
-                isBonded = isDeviceBonded(using)
-            )
-            scope.launch {
-                performSafeIdentificationSequence(using)
+        try {
+            val ctrl = rcspController ?: return
+            val using = ctrl.usingDevice ?: return
+            if (ctrl.isDeviceConnected(using)) {
+                val name = getDeviceName(using)
+                val addr = try { using.address ?: "Unknown" } catch (_: Exception) { "Unknown" }
+                _connectionState.value = ConnectionStatus.CONNECTED
+                _connectedDevice.value = HocoDevice(
+                    device = using,
+                    name = name,
+                    address = addr,
+                    isConnected = true,
+                    isBonded = isDeviceBonded(using)
+                )
+                scope.launch {
+                    performSafeIdentificationSequence(using)
+                }
             }
+        } catch (e: SecurityException) {
+            addLog("Check initial device permission error: ${e.message}")
+        } catch (e: Exception) {
+            addLog("Check initial device error: ${e.message}")
         }
     }
 

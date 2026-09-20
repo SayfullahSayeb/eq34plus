@@ -172,7 +172,7 @@ fun EarbudsHeroDisplay(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.eq34_case),
-                contentDescription = "HOCO EQ34 Plus",
+                contentDescription = "EQ34 Plus",
                 modifier = Modifier
                     .height(250.dp)
                     .fillMaxWidth(),

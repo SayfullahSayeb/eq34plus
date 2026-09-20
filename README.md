@@ -12,7 +12,7 @@ Lightweight Android app (18 MB) to control HOCO EQ34 Plus TWS earbuds via Blueto
 
 ## Comparison
 
-| Feature | Official (147 MB) | This App (18 MB) |
+| Feature | Official (147 MB) | This App (2 MB) |
 |---|---|---|
 | Noise Control (ANC/Transparency/Standard) | ✅ | ✅ |
 | 11-Level Adjustment | ✅ | ✅ |

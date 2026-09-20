@@ -147,7 +147,7 @@ fun MainControllerScreen(
     var renameName by remember { mutableStateOf("") }
     var showConnectDialog by remember { mutableStateOf(false) }
     var pendingConnectDevice by remember { mutableStateOf<android.bluetooth.BluetoothDevice?>(null) }
-    var pendingDeviceName by remember { mutableStateOf("HOCO EQ34 Plus") }
+    var pendingDeviceName by remember { mutableStateOf("EQ34 Plus") }
 
     // Auto-show connect dialog when a HOCO device is discovered and we're not connected
     LaunchedEffect(discoveredDevices, connectionState) {
@@ -202,7 +202,7 @@ fun MainControllerScreen(
         ) {
             // 1. Top Bar: [< Back] "HOCO EQ34 Plus ANC" [Hexagon Nut Settings]
             HocoTopBar(
-                title = connectedDevice?.name?.ifBlank { "HOCO EQ34 Plus ANC" } ?: "HOCO EQ34 Plus ANC",
+                title = connectedDevice?.name?.ifBlank { "EQ34 Plus ANC" } ?: "EQ34 Plus ANC",
                 onBackClick = {
                     showDeviceSheet = !showDeviceSheet
                 },
@@ -622,7 +622,7 @@ fun ConnectionStatusCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = connectedDevice?.name ?: "HOCO EQ34 Plus",
+                            text = connectedDevice?.name ?: "EQ34 Plus",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryDark
