@@ -63,45 +63,12 @@ fun ScreenshotAccurateNoiseCard(
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 20.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Noise Control",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                if (isConnected) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (noiseState.isPendingVerification) Color(0xFFFFF3CD)
-                                else Color(0xFFF3F4F6)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = when {
-                                noiseState.isPendingVerification -> "Verifying..."
-                                noiseState.mode == NoiseMode.TRANSPARENCY ->
-                                    "Transparency ${noiseState.internalLevel}"
-                                noiseState.mode == NoiseMode.ANC ->
-                                    "ANC ${noiseState.internalLevel}"
-                                else -> "Standard"
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (noiseState.isPendingVerification) Color(0xFF856404)
-                            else Color(0xFF4B5563)
-                        )
-                    }
-                }
-            }
+            Text(
+                text = "Noise Control",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
 
             Spacer(modifier = Modifier.height(14.dp))
 

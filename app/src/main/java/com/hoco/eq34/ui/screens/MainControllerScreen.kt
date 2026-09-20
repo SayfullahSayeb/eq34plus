@@ -127,7 +127,6 @@ fun MainControllerScreen(
             if (!isConnected) {
                 NotConnectedScreen(
                     isScanning = isScanning,
-                    pairedDevices = pairedDevices,
                     discoveredDevices = discoveredDevices,
                     onScanClick = {
                         if (isScanning) {
@@ -195,7 +194,6 @@ fun MainControllerScreen(
 @Composable
 fun NotConnectedScreen(
     isScanning: Boolean,
-    pairedDevices: List<HocoDevice>,
     discoveredDevices: List<HocoDevice>,
     onScanClick: () -> Unit,
     onConnectDevice: (android.bluetooth.BluetoothDevice) -> Unit
@@ -270,11 +268,7 @@ fun NotConnectedScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        val allDevices = pairedDevices + discoveredDevices.filter { scanned ->
-            pairedDevices.none { it.address == scanned.address }
-        }
-
-        if (allDevices.isEmpty() && !isScanning) {
+        if (discoveredDevices.isEmpty() && !isScanning) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,40 +289,8 @@ fun NotConnectedScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (pairedDevices.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Paired Devices",
-                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
-                                color = TextSecondary,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                    items(pairedDevices) { dev ->
-                        DeviceItem(
-                            name = dev.name,
-                            isBonded = dev.isBonded,
-                            onClick = { onConnectDevice(dev.device) }
-                        )
-                    }
-                }
-
                 if (discoveredDevices.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Nearby Devices",
-                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
-                                color = TextSecondary,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                        )
-                    }
-                    items(discoveredDevices.filter { scanned ->
-                        pairedDevices.none { it.address == scanned.address }
-                    }) { dev ->
+                    items(discoveredDevices) { dev ->
                         DeviceItem(
                             name = dev.name,
                             isBonded = dev.isBonded,
