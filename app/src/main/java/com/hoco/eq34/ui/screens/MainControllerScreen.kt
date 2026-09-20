@@ -144,7 +144,7 @@ fun MainControllerScreen(
             } else {
                 ConnectedScreen(
                     connectionState = connectionState,
-                    connectedDeviceName = connectedDevice?.name ?: "hoco eq34 Plus",
+                    connectedDeviceName = connectedDevice?.name ?: "hoco EQ34 Plus",
                     batteryState = batteryState,
                     noiseState = noiseState,
                     controlsEnabled = controlsEnabled,
@@ -243,7 +243,7 @@ fun NotConnectedScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "hoco eq34 Plus",
+            text = "hoco EQ34 Plus",
             style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -357,11 +357,19 @@ fun NotConnectedScreen(
                 }
             }
         }
+
+        // Version at bottom
+        Text(
+            text = "v1.0.10",
+            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+            color = TextSecondary.copy(alpha = 0.5f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            textAlign = TextAlign.Center
+        )
     }
 }
-
-@Composable
-fun DeviceItem(
     name: String,
     isBonded: Boolean,
     onClick: () -> Unit
@@ -600,6 +608,14 @@ fun ConnectedScreen(
         TextButton(onClick = onDisconnect) {
             Text("Disconnect", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
         }
+
+        // Version at bottom
+        Text(
+            text = "v1.0.10",
+            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+            color = TextSecondary.copy(alpha = 0.5f),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
     }
 
     if (showRenameDialog) {
