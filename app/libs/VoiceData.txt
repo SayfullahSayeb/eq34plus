@@ -1,0 +1,10 @@
+﻿javap : Error: class not found: com.jieli.bluetooth.bean.device.voice.VoiceData
+At line:2 char:1
++ javap -p -c "com.jieli.bluetooth.bean.device.voice.VoiceData" -cp $ja ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error: class no...voice.VoiceData:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Error: class not found: -cp
+Error: class not found: C:\Users\Administrator\Desktop\New 
+folder\jjj\eq34plus\app\libs\jl_bluetooth_rcsp_extracted\classes.jar
