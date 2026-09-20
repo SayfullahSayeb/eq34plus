@@ -479,7 +479,6 @@ class HocoBleController private constructor(private val appContext: Context) {
                 } catch (e: Exception) {
                     addLog("Could not set Bluetooth alias: ${e.message}")
                 }
-                ctrl.rebootDevice(device, null)
             }
 
             override fun onError(dev: BluetoothDevice?, error: BaseError?) {
