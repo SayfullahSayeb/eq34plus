@@ -1,4 +1,4 @@
-# HOCO EQ34 Plus Controller
+# hoco EQ34 Plus Controller
 
 Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, replacing the 147 MB official hoco Music app.
 
