@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.hoco.eq34"
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "com.aistudio.hocoeq34plus.eqctrl"
+    applicationId = "com.hoco.eq34"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
