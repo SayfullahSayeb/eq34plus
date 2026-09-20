@@ -63,7 +63,9 @@ jobs:
       with:
         name: "${{ github.ref_name }}"
         body: |
-          Lightweight BLE companion for your EQ34 Plus earbuds.
+          ## Changes in ${{ github.ref_name }}
+          
+          ${{ github.event.head_commit.message }}
           
           **Install:** Download the APK → Enable "Install from unknown sources" → Install.
         files: app/build/outputs/apk/release/app-release.apk

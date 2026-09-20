@@ -3,7 +3,6 @@
 import android.app.Application
 import android.util.Log
 import com.jieli.bluetooth.bean.BluetoothOption
-import com.jieli.bluetooth.constant.BluetoothConstant
 import com.jieli.bluetooth.impl.rcsp.RCSPController
 import java.io.File
 import java.io.PrintWriter
@@ -36,11 +35,12 @@ class HocoApplication : Application() {
         if (!RCSPController.isInit()) {
             try {
                 val bluetoothOption = BluetoothOption.createDefaultOption()
-                    .setUseMultiDevice(false)
+                    .setUseMultiDevice(true)
+                    .setReconnect(true)
                     .setPriority(BluetoothOption.PREFER_BLE)
-                    .setMandatoryUseBLE(false)
-                    .setMtu(BluetoothConstant.BLE_MTU_MAX)
-                    .setUseDeviceAuth(false)
+                    .setMandatoryUseBLE(true)
+                    .setMtu(509)
+                    .setUseDeviceAuth(true)
                     .setBleScanMode(2)
                 RCSPController.init(this, bluetoothOption)
             } catch (e: UnsatisfiedLinkError) {

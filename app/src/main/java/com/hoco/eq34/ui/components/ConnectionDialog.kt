@@ -127,7 +127,7 @@ fun ConnectingDevicePopup(
 
                     Image(
                         painter = painterResource(id = R.drawable.eq34_case),
-                        contentDescription = "EQ34 Plus",
+                        contentDescription = "HOCO EQ34",
                         modifier = Modifier
                             .size(170.dp)
                             .clip(RoundedCornerShape(16.dp)),
@@ -139,7 +139,7 @@ fun ConnectingDevicePopup(
 
                 // Device name
                 Text(
-                    text = deviceName.ifBlank { "EQ34 Plus" },
+                    text = deviceName.ifBlank { "HOCO EQ34" },
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,

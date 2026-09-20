@@ -147,30 +147,17 @@ fun MainControllerScreen(
     var renameName by remember { mutableStateOf("") }
     var showConnectDialog by remember { mutableStateOf(false) }
     var pendingConnectDevice by remember { mutableStateOf<android.bluetooth.BluetoothDevice?>(null) }
-    var pendingDeviceName by remember { mutableStateOf("EQ34 Plus") }
-
-    // Auto-show connect dialog when a HOCO device is discovered and we're not connected
-    LaunchedEffect(discoveredDevices, connectionState) {
-        if (connectionState == ConnectionStatus.DISCONNECTED) {
-            val hocoDevice = discoveredDevices.firstOrNull {
-                it.name.contains("HOCO", ignoreCase = true) || it.name.contains("EQ34", ignoreCase = true)
-            }
-            if (hocoDevice != null && !showConnectDialog) {
-                pendingConnectDevice = hocoDevice.device
-                pendingDeviceName = hocoDevice.name
-                showConnectDialog = true
-            }
-        }
-    }
+    var pendingDeviceName by remember { mutableStateOf("HOCO EQ34") }
 
     // Controls are only enabled when device is identified and ready
     val controlsEnabled = connectionState == ConnectionStatus.READY
 
-    // Permissions launcher
+    // Permissions launcher — match original HOCO app: BLUETOOTH_SCAN + BLUETOOTH_CONNECT + FINE_LOCATION
     val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
         )
     } else {
         arrayOf(
@@ -202,7 +189,7 @@ fun MainControllerScreen(
         ) {
             // 1. Top Bar: [< Back] "HOCO EQ34 Plus ANC" [Hexagon Nut Settings]
             HocoTopBar(
-                title = connectedDevice?.name?.ifBlank { "EQ34 Plus ANC" } ?: "EQ34 Plus ANC",
+                title = connectedDevice?.name?.ifBlank { "HOCO EQ34 ANC" } ?: "HOCO EQ34 ANC",
                 onBackClick = {
                     showDeviceSheet = !showDeviceSheet
                 },
@@ -622,7 +609,7 @@ fun ConnectionStatusCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = connectedDevice?.name ?: "EQ34 Plus",
+                            text = connectedDevice?.name ?: "HOCO EQ34",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryDark

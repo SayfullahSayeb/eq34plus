@@ -678,7 +678,7 @@ class HocoBleController private constructor(private val appContext: Context) {
         _discoveredDevices.value = emptyList()
         addLog("Starting BLE Scan...")
         try {
-            val success = ctrl.startBleScan(15000)
+            val success = ctrl.startBleScan(30000)
             _isScanning.value = success
             if (!success) {
                 addLog("Failed to start BLE Scan (Check Bluetooth/Location)")
