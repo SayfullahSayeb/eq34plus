@@ -15,7 +15,7 @@ Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, rep
 | Read-back Verification | ✅ | ✅ |
 | EQ Settings | ✅ | ❌ |
 | Touch Key Customization | ✅ | ❌ |
-| Firmware OTA Update | ✅ | ❌ (blocked for safety) |
+| Firmware OTA Update | ✅ | ❌ |
 | 50+ hoco Models | ✅ | ❌ (EQ34 Plus only) |
 
 
