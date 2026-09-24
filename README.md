@@ -8,7 +8,7 @@ Lightweight Android app to control hoco EQ34 Plus TWS earbuds via Bluetooth, rep
 | Feature | Official (147 MB) | This App (2 MB) |
 |---|---|---|
 | Noise Control (ANC/Transparency/Standard) | ✅ | ✅ |
-| 11-Level Adjustment | ✅ | ✅ |
+| 10-Level Adjustment | ✅ | ✅ |
 | Battery (L/R) | ✅ | ✅ |
 | Device Rename | ✅ | ✅ |
 | Connect Popup | ✅ | ✅ |
